@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -9,162 +10,226 @@ import {
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 
-const challenges = [
-  { icon: '⚽️', title: 'وەرزش', subtitle: 'پرسیاری خێرا لەسەر تۆپی پێ', color: '#DDF7E7' },
-  { icon: '🧠', title: 'زانیاری گشتی', subtitle: 'زانیاری خۆت تاقی بکەرەوە', color: '#E7E5FF' },
-  { icon: '🎬', title: 'فیلم و موزیک', subtitle: 'ناوی فیلم یان گۆرانی بڵێ', color: '#FFE8DC' },
+const questions = [
+  {
+    question: 'پایتەختی هەرێمی کوردستان کام شارە؟',
+    answers: ['هەولێر', 'سلێمانی', 'دهۆک', 'کەرکووک'],
+    correct: 0,
+  },
+  {
+    question: 'لە یاری تۆپی پێدا هەر تیمێک چەند یاریزان لە مەیداندا هەیە؟',
+    answers: ['٩', '١٠', '١١', '١٢'],
+    correct: 2,
+  },
+  {
+    question: 'کامەیان گەورەترین کیشوەری جیهانە؟',
+    answers: ['ئەفریقا', 'ئاسیا', 'ئەوروپا', 'ئۆسترالیا'],
+    correct: 1,
+  },
+];
+
+const modes = [
+  {
+    key: 'pk',
+    icon: '⚔️',
+    title: 'PK',
+    subtitle: '١ بەرامبەر ١ ـ هاوڕێکت بانگ بکە',
+    color: '#FFE6E6',
+  },
+  {
+    key: 'tahadi',
+    icon: '🔥',
+    title: 'تەحەدی',
+    subtitle: 'پرسیار و وەڵام و کۆکردنەوەی خاڵ',
+    color: '#EAE6FF',
+  },
+  {
+    key: 'konkan',
+    icon: '🏆',
+    title: 'کۆنکان',
+    subtitle: 'ڕکابەری گرووپی و پلەبەندی',
+    color: '#FFF3D6',
+  },
 ];
 
 export default function App() {
   const [screen, setScreen] = useState('home');
+  const [mode, setMode] = useState(null);
   const [score, setScore] = useState(120);
-  const [activeChallenge, setActiveChallenge] = useState(null);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [pkYou, setPkYou] = useState(0);
+  const [pkOpponent, setPkOpponent] = useState(0);
+  const [feedback, setFeedback] = useState('');
 
-  const startChallenge = (challenge) => {
-    setActiveChallenge(challenge);
-    setScreen('challenge');
+  const openMode = (selectedMode) => {
+    setMode(selectedMode);
+    setFeedback('');
+    setQuestionIndex(0);
+    setScreen(selectedMode.key === 'pk' ? 'pk' : 'quiz');
   };
 
-  const finishChallenge = () => {
-    setScore((current) => current + 10);
+  const answerQuestion = (index) => {
+    const current = questions[questionIndex];
+    const isCorrect = index === current.correct;
+    setFeedback(isCorrect ? '✅ وەڵامی ڕاست!' : '❌ وەڵامی هەڵە');
+    if (isCorrect) setScore((value) => value + 10);
+
+    setTimeout(() => {
+      setFeedback('');
+      setQuestionIndex((value) => (value + 1) % questions.length);
+    }, 650);
+  };
+
+  const pkAnswer = (index) => {
+    const current = questions[questionIndex];
+    if (index === current.correct) {
+      setPkYou((value) => value + 1);
+      setScore((value) => value + 10);
+      setFeedback('✅ خاڵێکت بردەوە');
+    } else {
+      setPkOpponent((value) => value + 1);
+      setFeedback('❌ خاڵ بۆ ڕکابەر');
+    }
+
+    setTimeout(() => {
+      setFeedback('');
+      setQuestionIndex((value) => (value + 1) % questions.length);
+    }, 650);
+  };
+
+  const goHome = () => {
     setScreen('home');
+    setMode(null);
+    setFeedback('');
+  };
+
+  const renderQuestion = (onAnswer) => {
+    const current = questions[questionIndex];
+    return (
+      <>
+        <View style={styles.progressRow}>
+          <Text style={styles.muted}>پرسیار {questionIndex + 1}/{questions.length}</Text>
+          <Text style={styles.points}>⭐ {score} خاڵ</Text>
+        </View>
+        <Text style={styles.question}>{current.question}</Text>
+        {current.answers.map((answer, index) => (
+          <TouchableOpacity key={`${answer}-${index}`} style={styles.answer} onPress={() => onAnswer(index)}>
+            <Text style={styles.answerText}>{answer}</Text>
+          </TouchableOpacity>
+        ))}
+        {!!feedback && <Text style={styles.feedback}>{feedback}</Text>}
+      </>
+    );
   };
 
   return (
     <SafeAreaView style={styles.safe}>
       <ExpoStatusBar style="dark" />
       <StatusBar barStyle="dark-content" />
-      <View style={styles.app}>
-        {screen === 'home' ? (
-          <>
-            <View style={styles.header}>
-              <View style={styles.avatar}><Text style={styles.avatarText}>T+</Text></View>
-              <View style={styles.headerCopy}>
-                <Text style={styles.eyebrow}>بەخێربێیتەوە</Text>
-                <Text style={styles.name}>Tahadi Plus</Text>
-              </View>
-            </View>
 
-            <View style={styles.hero}>
-              <Text style={styles.heroBadge}>🔥 تەحەدای ئەمڕۆ</Text>
-              <Text style={styles.heroTitle}>ئامادەی بۆ بردنەوە؟</Text>
-              <Text style={styles.heroText}>هاوڕێکانت بانگ بکە و بە زیرەکی خاڵ کۆبکەرەوە.</Text>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => startChallenge(challenges[1])}>
-                <Text style={styles.primaryButtonText}>دەست پێ بکە</Text>
-              </TouchableOpacity>
+      {screen === 'home' && (
+        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <View style={styles.logo}><Text style={styles.logoText}>T+</Text></View>
+            <View style={styles.headerText}>
+              <Text style={styles.welcome}>بەخێربێیت</Text>
+              <Text style={styles.title}>Tahadi Plus</Text>
             </View>
+          </View>
 
-            <View style={styles.stats}>
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{score}</Text>
-                <Text style={styles.statLabel}>خاڵ</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>7</Text>
-                <Text style={styles.statLabel}>بردنەوە</Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>3</Text>
-                <Text style={styles.statLabel}>ڕۆژ بەردەوام</Text>
-              </View>
-            </View>
+          <View style={styles.hero}>
+            <Text style={styles.heroMini}>🎮 یارییەکەت هەڵبژێرە</Text>
+            <Text style={styles.heroTitle}>ڕکابەری، تەحەدی، بردنەوە</Text>
+            <Text style={styles.heroBody}>PK بکە، تەحەدی بکە و خاڵەکانت زیاد بکە.</Text>
+          </View>
 
-            <Text style={styles.sectionTitle}>جۆری تەحەدا هەڵبژێرە</Text>
-            <View style={styles.cards}>
-              {challenges.map((challenge) => (
-                <TouchableOpacity
-                  key={challenge.title}
-                  style={[styles.card, { backgroundColor: challenge.color }]}
-                  onPress={() => startChallenge(challenge)}
-                >
-                  <Text style={styles.cardIcon}>{challenge.icon}</Text>
-                  <View style={styles.cardCopy}>
-                    <Text style={styles.cardTitle}>{challenge.title}</Text>
-                    <Text style={styles.cardSubtitle}>{challenge.subtitle}</Text>
-                  </View>
-                  <Text style={styles.arrow}>‹</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        ) : (
-          <View style={styles.challengeScreen}>
-            <TouchableOpacity style={styles.back} onPress={() => setScreen('home')}>
-              <Text style={styles.backText}>گەڕانەوە ←</Text>
+          <View style={styles.statsBox}>
+            <View style={styles.stat}><Text style={styles.statValue}>{score}</Text><Text style={styles.statLabel}>خاڵ</Text></View>
+            <View style={styles.stat}><Text style={styles.statValue}>7</Text><Text style={styles.statLabel}>بردنەوە</Text></View>
+            <View style={styles.stat}><Text style={styles.statValue}>3</Text><Text style={styles.statLabel}>ڕۆژ</Text></View>
+          </View>
+
+          <Text style={styles.sectionTitle}>یارییەکان</Text>
+          {modes.map((item) => (
+            <TouchableOpacity key={item.key} style={[styles.modeCard, { backgroundColor: item.color }]} onPress={() => openMode(item)}>
+              <Text style={styles.modeIcon}>{item.icon}</Text>
+              <View style={styles.modeCopy}>
+                <Text style={styles.modeTitle}>{item.title}</Text>
+                <Text style={styles.modeSubtitle}>{item.subtitle}</Text>
+              </View>
+              <Text style={styles.chevron}>‹</Text>
             </TouchableOpacity>
-            <View style={[styles.challengeIcon, { backgroundColor: activeChallenge?.color }]}>
-              <Text style={styles.challengeEmoji}>{activeChallenge?.icon}</Text>
-            </View>
-            <Text style={styles.challengeTitle}>{activeChallenge?.title}</Text>
-            <Text style={styles.question}>پایتەختی هەرێمی کوردستان کام شارە؟</Text>
-            {['هەولێر', 'سلێمانی', 'دهۆک', 'کەرکووک'].map((answer, index) => (
-              <TouchableOpacity
-                key={answer}
-                style={styles.answer}
-                onPress={index === 0 ? finishChallenge : undefined}
-              >
-                <Text style={styles.answerText}>{answer}</Text>
-              </TouchableOpacity>
-            ))}
-            <Text style={styles.hint}>وەڵامی ڕاست ١٠ خاڵ زیاد دەکات</Text>
-          </View>
-        )}
+          ))}
+        </ScrollView>
+      )}
 
-        {screen === 'home' && (
-          <View style={styles.nav}>
-            <View style={styles.navItem}><Text style={styles.navIcon}>⌂</Text><Text style={styles.navActive}>سەرەکی</Text></View>
-            <View style={styles.navItem}><Text style={styles.navIcon}>♛</Text><Text style={styles.navLabel}>پلەبەندی</Text></View>
-            <View style={styles.navItem}><Text style={styles.navIcon}>●</Text><Text style={styles.navLabel}>هەژمار</Text></View>
+      {screen === 'quiz' && (
+        <ScrollView contentContainerStyle={styles.gameContainer}>
+          <TouchableOpacity onPress={goHome}><Text style={styles.back}>← گەڕانەوە</Text></TouchableOpacity>
+          <View style={[styles.modeBadge, { backgroundColor: mode?.color }]}><Text style={styles.modeBadgeIcon}>{mode?.icon}</Text></View>
+          <Text style={styles.gameTitle}>{mode?.title}</Text>
+          {renderQuestion(answerQuestion)}
+        </ScrollView>
+      )}
+
+      {screen === 'pk' && (
+        <ScrollView contentContainerStyle={styles.gameContainer}>
+          <TouchableOpacity onPress={goHome}><Text style={styles.back}>← گەڕانەوە</Text></TouchableOpacity>
+          <Text style={styles.pkTitle}>⚔️ PK</Text>
+          <View style={styles.pkScoreBox}>
+            <View style={styles.player}><Text style={styles.playerName}>تۆ</Text><Text style={styles.playerScore}>{pkYou}</Text></View>
+            <Text style={styles.vs}>VS</Text>
+            <View style={styles.player}><Text style={styles.playerName}>ڕکابەر</Text><Text style={styles.playerScore}>{pkOpponent}</Text></View>
           </View>
-        )}
-      </View>
+          <Text style={styles.pkHint}>هەر وەڵامێکی ڕاست = ١ خاڵ</Text>
+          {renderQuestion(pkAnswer)}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F7F8FC' },
-  app: { flex: 1, paddingHorizontal: 20, paddingTop: 10 },
+  container: { padding: 20, paddingBottom: 36 },
+  gameContainer: { padding: 20, paddingBottom: 36 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
-  avatar: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#5B3DF5', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  headerCopy: { flex: 1, marginLeft: 12 },
-  eyebrow: { color: '#85899A', fontSize: 13, textAlign: 'right' },
-  name: { color: '#171826', fontSize: 21, fontWeight: '800', textAlign: 'right' },
-  hero: { backgroundColor: '#5B3DF5', borderRadius: 28, padding: 22, shadowColor: '#5B3DF5', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 18, elevation: 7 },
-  heroBadge: { color: '#DCD5FF', fontSize: 13, fontWeight: '700', textAlign: 'right' },
-  heroTitle: { color: '#FFFFFF', fontSize: 27, fontWeight: '900', marginTop: 10, textAlign: 'right' },
-  heroText: { color: '#E8E4FF', fontSize: 14, lineHeight: 22, marginTop: 6, textAlign: 'right' },
-  primaryButton: { backgroundColor: '#FFFFFF', borderRadius: 15, paddingVertical: 13, alignItems: 'center', marginTop: 18 },
-  primaryButtonText: { color: '#5B3DF5', fontSize: 16, fontWeight: '800' },
-  stats: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 15, marginTop: 17, alignItems: 'center' },
+  logo: { width: 52, height: 52, borderRadius: 18, backgroundColor: '#5B3DF5', alignItems: 'center', justifyContent: 'center' },
+  logoText: { color: '#fff', fontWeight: '900', fontSize: 20 },
+  headerText: { flex: 1, marginLeft: 12 },
+  welcome: { textAlign: 'right', color: '#8B8FA1', fontSize: 13 },
+  title: { textAlign: 'right', color: '#171826', fontSize: 24, fontWeight: '900' },
+  hero: { backgroundColor: '#5B3DF5', borderRadius: 28, padding: 22 },
+  heroMini: { textAlign: 'right', color: '#DCD5FF', fontWeight: '800' },
+  heroTitle: { textAlign: 'right', color: '#fff', fontSize: 26, fontWeight: '900', marginTop: 10 },
+  heroBody: { textAlign: 'right', color: '#EAE6FF', fontSize: 14, lineHeight: 22, marginTop: 8 },
+  statsBox: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 20, marginTop: 16, paddingVertical: 16 },
   stat: { flex: 1, alignItems: 'center' },
-  statValue: { color: '#171826', fontSize: 18, fontWeight: '900' },
-  statLabel: { color: '#969AAB', fontSize: 11, marginTop: 3 },
-  divider: { width: 1, height: 30, backgroundColor: '#EBECF1' },
-  sectionTitle: { color: '#171826', fontSize: 18, fontWeight: '900', textAlign: 'right', marginTop: 21, marginBottom: 10 },
-  cards: { gap: 9 },
-  card: { minHeight: 74, borderRadius: 19, padding: 14, flexDirection: 'row', alignItems: 'center' },
-  cardIcon: { fontSize: 30 },
-  cardCopy: { flex: 1, marginHorizontal: 12 },
-  cardTitle: { color: '#222331', fontSize: 16, fontWeight: '800', textAlign: 'right' },
-  cardSubtitle: { color: '#707487', fontSize: 12, marginTop: 3, textAlign: 'right' },
-  arrow: { color: '#4B4D5A', fontSize: 28 },
-  nav: { marginTop: 'auto', marginBottom: 8, paddingTop: 11, borderTopWidth: 1, borderTopColor: '#E6E7ED', flexDirection: 'row', justifyContent: 'space-around' },
-  navItem: { alignItems: 'center', minWidth: 70 },
-  navIcon: { color: '#5B3DF5', fontSize: 19, fontWeight: '900' },
-  navActive: { color: '#5B3DF5', fontSize: 11, fontWeight: '800', marginTop: 2 },
-  navLabel: { color: '#9A9EAD', fontSize: 11, marginTop: 2 },
-  challengeScreen: { flex: 1, paddingTop: 8 },
-  back: { alignSelf: 'flex-end', paddingVertical: 10 },
-  backText: { color: '#5B3DF5', fontWeight: '800' },
-  challengeIcon: { width: 88, height: 88, borderRadius: 28, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 35 },
-  challengeEmoji: { fontSize: 42 },
-  challengeTitle: { color: '#171826', fontSize: 25, fontWeight: '900', textAlign: 'center', marginTop: 16 },
-  question: { color: '#282A38', fontSize: 21, fontWeight: '800', lineHeight: 33, textAlign: 'center', marginVertical: 28 },
-  answer: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E5EC', borderRadius: 17, paddingVertical: 16, paddingHorizontal: 18, marginBottom: 10 },
-  answerText: { color: '#313341', fontSize: 17, fontWeight: '700', textAlign: 'right' },
-  hint: { color: '#979BAA', fontSize: 12, textAlign: 'center', marginTop: 12 },
+  statValue: { fontSize: 19, fontWeight: '900', color: '#1B1C29' },
+  statLabel: { fontSize: 11, color: '#9599A9', marginTop: 3 },
+  sectionTitle: { textAlign: 'right', fontSize: 20, fontWeight: '900', color: '#1B1C29', marginTop: 24, marginBottom: 12 },
+  modeCard: { flexDirection: 'row', alignItems: 'center', padding: 16, minHeight: 82, borderRadius: 21, marginBottom: 11 },
+  modeIcon: { fontSize: 31 },
+  modeCopy: { flex: 1, marginHorizontal: 13 },
+  modeTitle: { textAlign: 'right', fontSize: 18, fontWeight: '900', color: '#222330' },
+  modeSubtitle: { textAlign: 'right', marginTop: 4, fontSize: 12, color: '#6F7383' },
+  chevron: { fontSize: 31, color: '#555868' },
+  back: { color: '#5B3DF5', fontWeight: '900', marginBottom: 22, textAlign: 'right' },
+  modeBadge: { width: 92, height: 92, borderRadius: 30, alignSelf: 'center', alignItems: 'center', justifyContent: 'center' },
+  modeBadgeIcon: { fontSize: 44 },
+  gameTitle: { textAlign: 'center', fontSize: 29, fontWeight: '900', color: '#1B1C29', marginTop: 14, marginBottom: 20 },
+  progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 },
+  muted: { color: '#9498A8', fontSize: 12 },
+  points: { color: '#5B3DF5', fontWeight: '900', fontSize: 12 },
+  question: { textAlign: 'right', color: '#242634', fontSize: 21, fontWeight: '900', lineHeight: 33, marginBottom: 20 },
+  answer: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#E3E5EC', borderRadius: 17, paddingVertical: 17, paddingHorizontal: 18, marginBottom: 11 },
+  answerText: { textAlign: 'right', fontSize: 17, fontWeight: '800', color: '#303240' },
+  feedback: { textAlign: 'center', fontSize: 16, fontWeight: '900', marginTop: 10, color: '#343645' },
+  pkTitle: { textAlign: 'center', fontSize: 31, fontWeight: '900', color: '#1B1C29', marginBottom: 18 },
+  pkScoreBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 24, padding: 18, marginBottom: 10 },
+  player: { flex: 1, alignItems: 'center' },
+  playerName: { color: '#6E7281', fontSize: 13, fontWeight: '800' },
+  playerScore: { color: '#1B1C29', fontSize: 34, fontWeight: '900', marginTop: 6 },
+  vs: { color: '#5B3DF5', fontWeight: '900', fontSize: 17 },
+  pkHint: { textAlign: 'center', color: '#8D91A2', marginBottom: 20, fontSize: 12 },
 });
