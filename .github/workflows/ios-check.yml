@@ -1,0 +1,24 @@
+name: iOS build check
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-ios-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Validate Expo configuration
+        run: npx expo config --type public
+      - name: Export iOS bundle
+        run: npx expo export --platform ios --output-dir dist
