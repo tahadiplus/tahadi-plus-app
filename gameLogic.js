@@ -102,7 +102,7 @@ function winningHand(hand, indicator) {
     const first = Array.from({ length: 14 }, (_, i) => i).find(i => !(mask & (1 << i)));
     const others = Array.from({ length: 14 }, (_, i) => i).filter(i => i > first && !(mask & (1 << i)));
     for (let size = 3; size <= 4; size++) {
-      function choose(at, chosen) {
+      const choose = (at, chosen) => {
         if (chosen.length === size - 1) {
           const indices = [first, ...chosen];
           const group = indices.map(i => hand[i]);
@@ -111,7 +111,7 @@ function winningHand(hand, indicator) {
         }
         for (let j = at; j < others.length; j++) if (choose(j + 1, [...chosen, others[j]])) return true;
         return false;
-      }
+      };
       if (choose(0, [])) { memo.set(mask, true); return true; }
     }
     memo.set(mask, false);
