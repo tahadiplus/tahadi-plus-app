@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import okey from './gameLogic';
+import konkan from './konkanLogic';
+import KurdistanFlag from './KurdistanFlag';
 
 const GOLD = '#F1C65D', GOLD_SOFT = '#D69A37', NAVY = '#080A10', CARD = '#171B24', PALE = '#F7F1E5';
 const quiz = [
@@ -24,7 +26,7 @@ export default function App() {
   const [roomName, setRoomName] = useState('');
   const [room, setRoom] = useState(null);
   const [roomMode, setRoomMode] = useState('1v1');
-  const [inventory, setInventory] = useState({ rose: 0, crown: 0, trophy: 0 });
+  const [inventory, setInventory] = useState({ rose: 0, crown: 0, trophy: 0, eagle: 0, zagros: 0 });
   const [mode, setMode] = useState('quiz');
   const [index, setIndex] = useState(0);
   const [turn, setTurn] = useState(0);
@@ -32,6 +34,8 @@ export default function App() {
   const [picked, setPicked] = useState(null);
   const [board, setBoard] = useState(() => okey.startOkey());
   const [selected, setSelected] = useState(null);
+  const [konkanBoard, setKonkanBoard] = useState(() => konkan.startKonkan());
+  const [konkanSelected, setKonkanSelected] = useState([]);
 
   function begin(nextMode) {
     setMode(nextMode); setIndex(0); setTurn(0); setPoints([0, 0]);
@@ -107,6 +111,51 @@ export default function App() {
     setInventory(previous => ({ ...previous, [key]: previous[key] + 1 }));
     Alert.alert('زیاد کرا', label + ' بۆ کۆگای دیارییەکانت زیاد کرا. ئەمە دیمۆی ناوخۆییە.');
   }
+  function drawKonkan() {
+    if (konkanBoard.phase !== 'draw' || !konkanBoard.stock.length) {
+      if (!konkanBoard.stock.length) Alert.alert('کاشی نەماوە', 'مێزێکی نوێ دەست پێ بکە.');
+      return;
+    }
+    setKonkanBoard(previous => ({ ...previous, hand: [...previous.hand, previous.stock[0]],
+      stock: previous.stock.slice(1), phase: 'meld' }));
+    setKonkanSelected([]);
+  }
+  function toggleKonkanTile(id) {
+    setKonkanSelected(previous => previous.includes(id) ? previous.filter(item => item !== id) : [...previous, id]);
+  }
+  function addKonkanMeld() {
+    if (konkanBoard.phase !== 'meld') return Alert.alert('سەرەتا کاشییەک هەڵبگرە');
+    const group = konkanBoard.hand.filter(tile => konkanSelected.includes(tile.id));
+    if (!konkan.validMeld(group, konkanBoard.cup)) return Alert.alert('گرووپەکە دروست نییە',
+      '٣ تا ٥ کاشی هاوشێوە یان زنجیرە هەڵبژێرە. جوکەرەکان لەم ڕاهێنانەدا هێشتا ناچنە گرووپ.');
+    setKonkanBoard(previous => ({ ...previous,
+      hand: previous.hand.filter(tile => !konkanSelected.includes(tile.id)),
+      [previous.opened ? 'melds' : 'pending']: [...(previous.opened ? previous.melds : previous.pending), group] }));
+    setKonkanSelected([]);
+  }
+  function openKonkan() {
+    const score = konkanBoard.pending.reduce((sum, group) => sum + konkan.meldPoints(group), 0);
+    if (score < 81) return Alert.alert('٨١ خاڵ پێویستە', 'گرووپەکانی ئەم نۆرە: ' + score + ' خاڵ.');
+    setKonkanBoard(previous => ({ ...previous, opened: true, openPoints: score,
+      melds: [...previous.melds, ...previous.pending], pending: [] }));
+    Alert.alert('مێزەکەت کرایەوە! 🏰', score + ' خاڵ · ئێستا دەتوانیت گرووپی تر زیاد بکەیت.');
+  }
+  function undoKonkan() {
+    setKonkanBoard(previous => ({ ...previous, hand: [...previous.hand, ...previous.pending.flat()], pending: [] }));
+    setKonkanSelected([]);
+  }
+  function discardKonkan() {
+    if (konkanBoard.phase !== 'meld') return;
+    if (konkanBoard.pending.length) return Alert.alert('گرووپەکان تەواو بکە',
+      'بە ٨١ خاڵ مێزەکەت بکەرەوە یان گرووپە چاوەڕوانەکان هەڵبوەشێنەوە.');
+    if (konkanSelected.length !== 1) return Alert.alert('یەک کاشی هەڵبژێرە', 'بۆ کۆتایی نۆرە تەنها یەک کاشی فڕێ بدە.');
+    const final = konkanBoard.opened && konkanBoard.hand.length === 1;
+    setKonkanBoard(previous => ({ ...previous, discard: previous.hand.find(tile => tile.id === konkanSelected[0]),
+      hand: previous.hand.filter(tile => tile.id !== konkanSelected[0]),
+      phase: final ? 'done' : 'draw', won: final, turns: previous.turns + 1 }));
+    setKonkanSelected([]);
+    if (final) Alert.alert('پیرۆزە! 🏰', 'ڕاهێنانی کۆنکانت تەواو کرد؛ ئەمە یاریی ئۆنلاین نییە.');
+  }
   const button = (label, onPress, secondary = false) =>
     <TouchableOpacity accessibilityRole="button" style={[styles.button, secondary && styles.secondary]} onPress={onPress}>
       <Text style={[styles.buttonText, secondary && styles.secondaryText]}>{label}</Text>
@@ -133,20 +182,23 @@ export default function App() {
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.page}>
       {screen === 'home' && <>
         <View style={styles.homeHeader}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>♛</Text></View>
+          <View style={styles.avatar}><KurdistanFlag width={40} height={27} /></View>
           <View style={styles.homeIdentity}><Text style={styles.small}>بەخێربێیتەوە، {name}</Text>
-            <Text style={styles.heading}>TAHADI <Text style={{ color: GOLD }}>PLUS</Text></Text></View>
+            <Text style={styles.heading}>تەحەدی <Text style={{ color: GOLD }}>پڵەس</Text></Text></View>
           <TouchableOpacity accessibilityRole="button" style={styles.coinChip} onPress={() => setScreen('wallet')}>
             <Text style={styles.balance}>🪙 {coins} ＋</Text></TouchableOpacity>
         </View>
-        <View style={styles.hero}>
-          <Text style={styles.heroCrown}>♛</Text>
-          <Text style={styles.heroSmall}>تەحەدای ئەمڕۆ · iPhone</Text>
-          <Text style={styles.heroTitle}>لەسەر مێزی یاری،{ '\n' } پاڵەوان بە!</Text>
-          <Text style={styles.heroCopy}>PK، ئۆکەی و پرسیارەکان ـ هەموویان لە یەک شوێن.</Text>
-          {button('⚔️ PK دەست پێ بکە', () => begin('pk'))}
-          <Text style={styles.heroCaption}>دوو کەس · لە هەمان مۆبایل</Text>
-        </View>
+        <ImageBackground source={require('./assets/zagros-citadel.jpg')} style={styles.hero}
+          imageStyle={styles.heroImage} resizeMode="cover">
+          <View style={styles.heroShade}>
+            <View style={styles.heroTop}><KurdistanFlag width={64} height={43} />
+              <Text style={styles.heroSmall}>قەڵای زاگرۆس · ئایفۆن</Text></View>
+            <Text style={styles.heroTitle}>بەرەو قەڵای زاگرۆس،{ '\n' } پاڵەوان بە!</Text>
+            <Text style={styles.heroCopy}>کۆنکان، ئۆکەی و تەحەدی · هەمووی بە کوردی.</Text>
+            {button('🀄 مێزی یاری بکەرەوە', () => setScreen('okey'))}
+            <Text style={styles.heroCaption}>ڕاهێنانی تاکەکەسی لە ئایفۆن</Text>
+          </View>
+        </ImageBackground>
         <View style={styles.stats}>
           <View><Text style={styles.stat}>🪙 {coins}</Text><Text style={styles.statLabel}>کۆینی دیمۆ</Text></View>
           <View style={styles.statDivider} />
@@ -156,17 +208,18 @@ export default function App() {
         </View>
         {title('⚔️ دۆخی ڕکابەری')}
         <View style={styles.modeGrid}>{[
-          ['1v1', '#3B2350', 'PK لە یەک مۆبایل', () => begin('pk')],
-          ['4v4', '#173047', 'ژووری تیمی ناوخۆیی', () => openMode('4v4')],
-          ['8v8', '#403326', 'ژووری تیمی ناوخۆیی', () => openMode('8v8')],
-          ['12v12', '#24382D', 'ژووری تیمی ناوخۆیی', () => openMode('12v12')],
+          ['یەک بە یەک', '#3B2350', 'پرسیار · دوو کەس لە یەک ئامێر', () => begin('pk')],
+          ['چوار بە چوار', '#173047', 'ژووری تیمی ناوخۆیی', () => openMode('4v4')],
+          ['هەشت بە هەشت', '#403326', 'ژووری تیمی ناوخۆیی', () => openMode('8v8')],
+          ['دوازدە بە دوازدە', '#24382D', 'ژووری تیمی ناوخۆیی', () => openMode('12v12')],
         ].map(([label, color, detail, action]) =>
           <TouchableOpacity key={label} accessibilityRole="button" style={[styles.modeBlock, { backgroundColor: color }]} onPress={action}>
             <Text style={styles.modeLarge}>{label}</Text><Text style={styles.modeMini}>{detail}</Text>
             <Text style={styles.modeEdge}>↗</Text>
           </TouchableOpacity>)}</View>
         {title('🎮 یاری و ژوورەکان')}
-        {[['🀄', 'ئۆکەی', 'کاشی و جوکەر · تاکەکەسی', () => setScreen('okey')],
+        {[['🏰', 'کۆنکان', 'ڕاهێنانی ٨١ خاڵ · تاکەکەسی', () => setScreen('konkan')],
+          ['🀄', 'ئۆکەی', 'کاشی و جوکەر · تاکەکەسی', () => setScreen('okey')],
           ['🧠', 'تەحەدای زانیاری', '٨ پرسیار · وەڵام بدە', () => begin('quiz')],
           ['🎙️', 'ژووری گشتی و تایبەت', 'ژووری دیمۆ دروست بکە', () => setScreen('rooms')],
           ['🪙', 'کۆین و دیاری', 'کۆگای دیارییە ناوخۆییەکان', () => setScreen('wallet')]].map(([icon, label, detail, action]) =>
@@ -175,7 +228,7 @@ export default function App() {
             <View style={styles.modeBody}><Text style={styles.modeName}>{label}</Text>
               <Text style={styles.modeDetail}>{detail}</Text></View><Text style={styles.arrow}>‹</Text>
           </TouchableOpacity>)}
-        {notice('وەشانی تاقیکردنەوە: یاری لەم مۆبایلەدایە؛ LIVE، دەنگ، یاریزانی ئۆنلاین و پارەدانی ڕاستەقینە هێشتا نییە.')}
+        {notice('وەشانی تاقیکردنەوە: یاری لەم مۆبایلەدایە؛ دەنگ، یاریزانی ئۆنلاین و پارەدانی ڕاستەقینە هێشتا نییە.')}
       </>}
       {screen === 'rooms' && <>{header('ژوورەکان')}
         <View style={styles.sectionHero}><Text style={styles.sectionIcon}>◈</Text>
@@ -192,7 +245,7 @@ export default function App() {
           placeholder="ناوی ژوورەکەت بنووسە" placeholderTextColor="#9A91A1" maxLength={36} />
         {button('＋ ژووری تایبەت دروست بکە', createRoom)}
         {title('◈ ژووری گشتی')}
-        <View style={styles.roomNotice}><Text style={styles.roomNoticeTitle}>بەشی LIVE هێشتا بەردەست نییە</Text>
+        <View style={styles.roomNotice}><Text style={styles.roomNoticeTitle}>بەشی ئۆنلاین هێشتا بەردەست نییە</Text>
           <Text style={styles.modeDetail}>یاریزانانی ساختە نیشان نادرێن. بۆ هاوڕێی لە مۆبایلی تر سێرڤەر پێویستە.</Text></View>
         {title('ژوورەکانی تۆ')}
         {rooms.length ? rooms.map(item => <TouchableOpacity key={item.id} accessibilityRole="button"
@@ -208,22 +261,22 @@ export default function App() {
         <View style={styles.seatCard}><Text style={styles.seatAvatar}>♛</Text>
           <View><Text style={styles.modeName}>{room?.host || name}</Text>
             <Text style={styles.modeDetail}>خاوەنی ژوور · ئەندامی ئێستا</Text></View></View>
-        {notice('بۆ یاریی دوو کەس لە هەمان iPhone دوگمەی PK بەکار بهێنە. میکرۆفۆن و بانگهێشتنی ئۆنلاین هێشتا نییە.')}
-        {button('⚔️ PK دەست پێ بکە', () => begin('pk'))}
+        {notice('بۆ یاریی دوو کەس لە هەمان ئایفۆن دوگمەی ڕکابەری بەکار بهێنە. میکرۆفۆن و بانگهێشتنی ئۆنلاین هێشتا نییە.')}
+        {button('⚔️ ڕکابەری دەست پێ بکە', () => begin('pk'))}
         {button('🧠 تەحەدای پرسیار', () => begin('quiz'), true)}
         {button('دەرچوون لە ژوور', () => setScreen('rooms'), true)}</>}
-      {screen === 'question' && <>{header(mode === 'pk' ? 'PK' : 'تەحەدا')}
+      {screen === 'question' && <>{header(mode === 'pk' ? 'ڕکابەری' : 'تەحەدا')}
         {mode === 'pk' ? <View style={styles.arena}>
           <View style={styles.fighter}><Text style={styles.fighterAvatar}>♛</Text>
             <Text style={styles.fighterName}>یاریزانی ١</Text><Text style={styles.fighterScore}>{points[0]}</Text></View>
-          <View><Text style={styles.vs}>VS</Text><Text style={styles.arenaHint}>4 پرسیار بۆ هەر کەس</Text></View>
+          <View><Text style={styles.vs}>بەرامبەر</Text><Text style={styles.arenaHint}>٤ پرسیار بۆ هەر کەس</Text></View>
           <View style={styles.fighter}><Text style={[styles.fighterAvatar, styles.fighterBlue]}>●</Text>
             <Text style={styles.fighterName}>یاریزانی ٢</Text><Text style={styles.fighterScore}>{points[1]}</Text></View>
         </View> : <View style={styles.quizBanner}><Text style={styles.sectionHeading}>🧠 تەحەدای زانیاری</Text>
           <Text style={styles.sectionCopy}>وەڵامی ڕاست · ١٠ کۆینی دیمۆ</Text></View>}
         {mode === 'pk' && notice('نۆرەی یاریزانی ' + (turn + 1) + ' ـەمە؛ مۆبایلەکە بۆ ئەوی تر پاس بکە.')}
         <View style={styles.questionMeta}><Text style={styles.metaText}>پرسیار {index + 1} / {quiz.length}</Text>
-          {badge(mode === 'pk' ? 'PK · ناوخۆیی' : 'کۆین +١٠')}</View>
+          {badge(mode === 'pk' ? 'ڕکابەری · ناوخۆیی' : 'کۆین +١٠')}</View>
         <View style={styles.progressTrack}><View style={[styles.progressFill,
           { width: (((index + 1) / quiz.length) * 100) + '%' }]} /></View>
         <View style={styles.question}><Text style={styles.questionText}>{quiz[index].q}</Text></View>
@@ -231,7 +284,7 @@ export default function App() {
           onPress={() => choose(i)} style={[styles.choice,
             picked !== null && i === quiz[index].answer && styles.correct,
             picked === i && i !== quiz[index].answer && styles.incorrect]}>
-          <Text style={styles.choiceLetter}>{['A', 'B', 'C', 'D'][i]}</Text>
+          <Text style={styles.choiceLetter}>{['١', '٢', '٣', '٤'][i]}</Text>
           <Text style={styles.choiceText}>{choice}</Text></TouchableOpacity>)}
         {picked !== null && <>{notice(picked === quiz[index].answer ? 'وەڵامی ڕاستە! ✨' : 'وەڵامی ڕاست: ' + quiz[index].choices[quiz[index].answer])}
           {button('پرسیاری دواتر', next)}</>}</>}
@@ -243,6 +296,52 @@ export default function App() {
           {mode === 'pk' && <Text style={styles.resultText}>یاریزانی ٢: {points[1]} / {quiz.length / 2}</Text>}
           <Text style={styles.small}>{mode === 'pk' ? (points[0] === points[1] ? 'یەکسانن!' : 'براوە: یاریزانی ' + (points[0] > points[1] ? '١' : '٢')) : 'هەر وەڵامێکی ڕاست ١٠ کۆینی دیمۆیە.'}</Text></View>
         {button('دووبارە یاری بکە', () => begin(mode))}{button('بگەڕێوە سەرەکی', () => setScreen('home'), true)}</>}
+      {screen === 'konkan' && <>{header('کۆنکان')}
+        <ImageBackground source={require('./assets/zagros-citadel.jpg')} style={styles.konkanBanner}
+          imageStyle={styles.heroImage} resizeMode="cover">
+          <View style={styles.konkanBannerShade}><KurdistanFlag width={54} height={36} />
+            <Text style={styles.sectionHeading}>مێزی قەڵای زاگرۆس</Text>
+            <Text style={styles.sectionCopy}>کۆنکان · ڕاهێنانی تاکەکەسی · یاسای هەولێر</Text></View>
+        </ImageBackground>
+        <View style={styles.okeyTable}>
+          <View style={styles.tableTop}><Text style={styles.tableSeat}>◯ شوێنی هاوتیم · یاریزانی ئۆنلاین نییە</Text>
+            {badge(konkanBoard.opened ? 'کرایەوە' : '٨١ خاڵ')}</View>
+          <View style={styles.tableCenter}>
+            <View style={styles.tablePile}><Text style={styles.tablePileIcon}>▤</Text>
+              <Text style={styles.tablePileLabel}>{konkanBoard.stock.length} کاشی</Text></View>
+            <View style={styles.tableCup}><Text style={styles.tableCupLabel}>جام</Text>
+              <View style={[styles.cupTile, { borderColor: colors[konkanBoard.cup.color] }]}>
+                <Text style={[styles.tileText, { color: colors[konkanBoard.cup.color] }]}>{konkanBoard.cup.number}</Text></View>
+              <Text style={styles.tableCupLabel}>جوکەر {konkan.jokerFor(konkanBoard.cup).number}</Text></View>
+            <View style={styles.tablePile}><Text style={styles.tablePileIcon}>{konkanBoard.discard?.number || '—'}</Text>
+              <Text style={styles.tablePileLabel}>فڕێدراو</Text></View>
+          </View><Text style={styles.tableSeat}>نۆرەی {konkanBoard.turns + 1} · {konkanBoard.opened ?
+            'گرووپەکان لەسەر مێزن' : 'گرووپەکان بگەیەنە ٨١ خاڵ'}</Text>
+        </View>
+        {konkanBoard.melds.length > 0 && <>{title('گرووپەکانی سەر مێز')}
+          {konkanBoard.melds.map((group, index) => <View key={index} style={styles.meldRow}>
+            <Text style={styles.meldText}>{group.map(tile => tile.number).join(' · ')} · {konkan.meldPoints(group)} خاڵ</Text></View>)}</>}
+        {konkanBoard.pending.length > 0 && <>{title('گرووپە چاوەڕوانەکان')}
+          <Text style={styles.notice}>{konkanBoard.pending.reduce((sum, group) => sum + konkan.meldPoints(group), 0)} / ٨١ خاڵ · لەم نۆرەدا</Text>
+          {konkanBoard.pending.map((group, index) => <View key={index} style={styles.meldRow}>
+            <Text style={styles.meldText}>{group.map(tile => tile.number).join(' · ')} · {konkan.meldPoints(group)} خاڵ</Text></View>)}</>}
+        {title('کاشییەکانی تۆ')}
+        <View style={styles.rack}><View style={styles.tileRow}>{konkanBoard.hand.map(tile =>
+          <TouchableOpacity key={tile.id} accessibilityRole="button" accessibilityLabel={'کاشی ' + tile.number}
+            onPress={() => toggleKonkanTile(tile.id)} style={[styles.tile, { borderColor: colors[tile.color] },
+              konkanSelected.includes(tile.id) && styles.selectedTile]}>
+            <Text style={[styles.tileText, { color: colors[tile.color] }]}>{tile.color === 'false' ||
+              konkan.isRealJoker(tile, konkanBoard.cup) ? '★' : tile.number}</Text></TouchableOpacity>)}</View></View>
+        {konkanBoard.won ? notice('ڕاهێنانەکەت تەواو بوو! مێزێکی نوێ دەست پێ بکە.') :
+          notice(konkanBoard.phase === 'draw' ? 'سەرەتا یەک کاشی لە کۆگا هەڵبگرە.' :
+            '٣ تا ٥ کاشی هەڵبژێرە بۆ گرووپ، یان یەک کاشی فڕێ بدە بۆ کۆتایی نۆرە.')}
+        {konkanBoard.phase === 'draw' && button('▤ کاشی هەڵبگرە', drawKonkan)}
+        {konkanBoard.phase === 'meld' && <>{button('◈ گرووپ زیاد بکە', addKonkanMeld)}
+          {!konkanBoard.opened && konkanBoard.pending.length > 0 && <>{button('🏰 بە ٨١ خاڵ مێز بکەرەوە', openKonkan)}
+            {button('گرووپەکان هەڵبوەشێنەوە', undoKonkan, true)}</>}
+          {button('یەک کاشی فڕێ بدە', discardKonkan, true)}</>}
+        {button('مێزی کۆنکانی نوێ', () => { setKonkanBoard(konkan.startKonkan()); setKonkanSelected([]); }, true)}
+        {notice('ئەمە ڕاهێنانی بنەڕەتییە: جوکەر، دزینی جوکەر، تیمی ٤ کەسی، پلەبەندی و هەموو وردەیاساکان هێشتا جێبەجێ نەکراون.')}</>}
       {screen === 'okey' && <>{header('ئۆکەی')}
         <View style={styles.okeyHeader}><Text style={styles.sectionIcon}>🀄</Text>
           <Text style={styles.sectionHeading}>مێزی ئۆکەی</Text>
@@ -253,7 +352,7 @@ export default function App() {
           <View style={styles.tableCenter}>
             <View style={styles.tablePile}><Text style={styles.tablePileIcon}>▤</Text>
               <Text style={styles.tablePileLabel}>{board.stock.length} کاشی</Text></View>
-            <View style={styles.tableCup}><Text style={styles.tableCupLabel}>نیشاندەر · CUP</Text>
+            <View style={styles.tableCup}><Text style={styles.tableCupLabel}>نیشاندەر · جام</Text>
               <View style={[styles.cupTile, { borderColor: colors[board.indicator.color] }]}>
                 <Text style={[styles.tileText, { color: colors[board.indicator.color] }]}>{board.indicator.number}</Text></View>
               <Text style={styles.tableCupLabel}>جوکەر {okey.jokerFor(board.indicator).number}</Text></View>
@@ -276,7 +375,7 @@ export default function App() {
         </> : <>{button('🏆 دەستەکەم بپشکنە', checkHand)}
           {button('کاشی دیاریکراو فڕێ بدە', discard, true)}</>}
         {button('یاری ئۆکەیی نوێ', () => { setBoard(okey.startOkey()); setSelected(null); }, true)}
-        {notice('ڕکابەری ٤ کەسی و یاسای تەواوی کۆنکان هێشتا نەکراوە؛ ئەمە دیمۆی تاکەکەسیی ئۆکەیە.')}</>}
+        {notice('ئەمە دیمۆی تاکەکەسیی ئۆکەیە؛ یاریی چوار کەسی و وردەیاسای تەواوی کۆنکان لە ڕاهێنانەکەدا هێشتا نییە.')}</>}
       {screen === 'leaderboard' && <>{header('پلەکان')}
         <View style={styles.sectionHero}><Text style={styles.sectionIcon}>🏆</Text>
           <Text style={styles.sectionHeading}>پلەبەندی</Text><Text style={styles.sectionCopy}>تەنها ئەنجامی ئەم مۆبایلە</Text></View>
@@ -285,9 +384,9 @@ export default function App() {
             <Text style={styles.modeDetail}>{wins} بردنەوە · {coins} کۆینی دیمۆ</Text></View>{badge('#١')}</View>
         {notice('پلەبەندی گشتی و یاریزانانی LIVE هێشتا پەیوەست نەکراون.')}</>}
       {screen === 'profile' && <>{header('هەژمار')}
-        <View style={styles.profileHero}><Text style={styles.profileAvatar}>♛</Text>
+        <View style={styles.profileHero}><KurdistanFlag width={72} height={48} />
           <Text style={styles.sectionHeading}>{name || 'یاریزان'}</Text>
-          <Text style={styles.sectionCopy}>Challenge is Life 👑</Text></View>
+          <Text style={styles.sectionCopy}>تەحەدی ژیانە 👑</Text></View>
         {title('ناوی یاریزان')}
         <TextInput style={styles.input} value={name} onChangeText={setName}
           placeholder="ناوی یاریزان" placeholderTextColor="#8895A9" maxLength={24} />
@@ -306,13 +405,14 @@ export default function App() {
           <View style={styles.modeBody}><Text style={styles.modeName}>بردنەوەی ئۆکەی</Text>
             <Text style={styles.modeDetail}>+٥٠ کۆینی دیمۆ</Text></View></View>
         {title('دیارییەکانی کۆگای تۆ')}
-        {[['🌹', 'گوڵ', 'rose', 30], ['🏆', 'کۆپا', 'trophy', 60], ['👑', 'تاج', 'crown', 100]].map(([icon, label, key, price]) =>
+        {[['🌹', 'گوڵ', 'rose', 30], ['🏆', 'کۆپا', 'trophy', 60], ['👑', 'تاج', 'crown', 100],
+          ['🦅', 'هەڵۆی زێڕین', 'eagle', 160], ['🏰', 'قەڵای زاگرۆس', 'zagros', 220]].map(([icon, label, key, price]) =>
           <View key={key} style={styles.giftCard}><Text style={styles.giftIcon}>{icon}</Text>
             <View style={styles.modeBody}><Text style={styles.modeName}>{label}</Text>
               <Text style={styles.modeDetail}>لە کۆگا: {inventory[key]} · {price} کۆین</Text></View>
             <TouchableOpacity accessibilityRole="button" style={styles.giftButton} onPress={() => collectGift(key, price, label)}>
               <Text style={styles.giftButtonText}>زیاد بکە</Text></TouchableOpacity></View>)}
-        {notice('ئەم دیارییانە تەنها لە کۆگای ناوخۆیی زیاد دەبن؛ ناتوانرێت بۆ کەسێکی ئۆنلاین بنێردرێن. کڕینی کۆین بە پارەی ڕاستەقینە نییە.')}
+        {notice('نرخەکان تەنها بۆ دیمۆن؛ ئەم دیارییانە لە کۆگای ناوخۆیی زیاد دەبن و ناتوانرێت ئۆنلاین بنێردرێن. کڕینی کۆین بە پارەی ڕاستەقینە نییە.')}
         {button('⚔️ بە تەحەدا کۆین کۆ بکەرەوە', () => begin('quiz'))}</>}
     </ScrollView>
     {['home', 'rooms', 'leaderboard', 'wallet', 'profile'].includes(screen) && nav}
@@ -332,14 +432,22 @@ const styles = StyleSheet.create({
   coinChip: { borderWidth: 1, borderColor: '#7F602A', backgroundColor: '#292215',
     borderRadius: 18, paddingVertical: 9, paddingHorizontal: 10 },
   balance: { color: GOLD, fontSize: 13, fontWeight: '900' },
-  hero: { backgroundColor: '#191719', borderRadius: 27, padding: 22, marginTop: 10,
+  hero: { backgroundColor: '#191719', borderRadius: 27, overflow: 'hidden', marginTop: 10,
     borderWidth: 1, borderColor: '#8A6629' },
+  heroImage: { borderRadius: 27 },
+  heroShade: { backgroundColor: 'rgba(7,8,13,0.55)', padding: 22, minHeight: 325,
+    justifyContent: 'flex-end' },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   heroCrown: { color: GOLD, fontSize: 48, textAlign: 'right' },
   heroSmall: { color: GOLD, fontSize: 14, textAlign: 'right', fontWeight: '800' },
   heroTitle: { color: '#FFFFFF', fontWeight: '900', fontSize: 29, textAlign: 'right', marginTop: 11,
     lineHeight: 38 },
   heroCopy: { color: '#C0B6A5', textAlign: 'right', marginVertical: 13, fontSize: 15 },
   heroCaption: { color: '#AF9C72', textAlign: 'center', marginTop: 6, fontSize: 12 },
+  konkanBanner: { borderRadius: 21, overflow: 'hidden', marginVertical: 10, borderWidth: 1,
+    borderColor: '#906B32' },
+  konkanBannerShade: { minHeight: 142, backgroundColor: 'rgba(7,8,13,0.53)', padding: 14,
+    alignItems: 'center', justifyContent: 'flex-end' },
   button: { backgroundColor: GOLD, borderRadius: 15, padding: 15, marginVertical: 7,
     borderWidth: 1, borderColor: '#FFE59A' },
   buttonText: { color: NAVY, fontSize: 17, fontWeight: '900', textAlign: 'center' },
@@ -355,7 +463,7 @@ const styles = StyleSheet.create({
   modeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   modeBlock: { width: '48.5%', borderWidth: 1, borderColor: '#755D3B',
     borderRadius: 17, padding: 16, marginBottom: 11, minHeight: 112 },
-  modeLarge: { color: '#FFF', fontSize: 27, fontWeight: '900' },
+  modeLarge: { color: '#FFF', fontSize: 19, fontWeight: '900', textAlign: 'right' },
   modeMini: { color: '#D9D0C5', fontSize: 11, marginTop: 4 },
   modeEdge: { color: GOLD, textAlign: 'right', fontSize: 19 },
   modeCard: { backgroundColor: CARD, borderRadius: 17, padding: 13, marginVertical: 6,
@@ -401,7 +509,7 @@ const styles = StyleSheet.create({
   fighterBlue: { backgroundColor: '#173C56', color: '#79C8FF' },
   fighterName: { color: '#C9C2B6', fontSize: 12, marginTop: 6 },
   fighterScore: { color: '#FFF', fontSize: 28, fontWeight: '900' },
-  vs: { color: GOLD, textAlign: 'center', fontSize: 27, fontWeight: '900' },
+  vs: { color: GOLD, textAlign: 'center', fontSize: 16, fontWeight: '900' },
   arenaHint: { color: '#ACA9A6', fontSize: 10, textAlign: 'center' },
   quizBanner: { backgroundColor: CARD, borderRadius: 18, padding: 20, marginVertical: 12,
     borderWidth: 1, borderColor: '#786038' },
@@ -448,6 +556,9 @@ const styles = StyleSheet.create({
     height: 53, justifyContent: 'center', alignItems: 'center', margin: 3 },
   selectedTile: { transform: [{ translateY: -8 }], backgroundColor: '#FFE3A5' },
   tileText: { fontSize: 21, fontWeight: '900' },
+  meldRow: { backgroundColor: '#254638', borderRadius: 12, borderWidth: 1, borderColor: '#8D713B',
+    padding: 10, marginVertical: 3 },
+  meldText: { color: '#F7E8BB', fontSize: 15, textAlign: 'center', fontWeight: '800' },
   profileHero: { alignItems: 'center', backgroundColor: CARD, borderWidth: 1,
     borderColor: '#8B6227', borderRadius: 24, padding: 24, marginVertical: 13 },
   profileAvatar: { fontSize: 46, color: GOLD, backgroundColor: '#3E2F1E',
