@@ -1,50 +1,250 @@
 import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import okey from './gameLogic';
 
-const GOLD='#F6B73C', GOLD2='#FFCF66', NAVY='#07111F', CARD='#101C2D', MUTED='#9AA7B8', WHITE='#F8FAFC';
-
-const questions=[
-  {q:'پایتەختی هەرێمی کوردستان کام شارە؟',a:['هەولێر','سلێمانی','دهۆک','کەرکووک'],c:0},
-  {q:'لە یاری تۆپی پێدا هەر تیمێک چەند یاریزان لە مەیداندا هەیە؟',a:['٩','١٠','١١','١٢'],c:2},
-  {q:'کامەیان گەورەترین کیشوەری جیهانە؟',a:['ئەفریقا','ئاسیا','ئەوروپا','ئۆسترالیا'],c:1},
-  {q:'٢ + ٨ × ٢ چەندە؟',a:['٢٠','١٨','١٦','١٢'],c:1},
+const GOLD = '#F8BE45', NAVY = '#091321', CARD = '#142236', PALE = '#F7F8FF';
+const quiz = [
+  { q: 'پایتەختی هەرێمی کوردستان کام شارە؟', choices: ['هەولێر', 'سلێمانی', 'دهۆک', 'کەرکووک'], answer: 0 },
+  { q: 'هەر تیمێکی تۆپی پێ چەند یاریزانی لە مەیداندا هەیە؟', choices: ['٩', '١٠', '١١', '١٢'], answer: 2 },
+  { q: 'گەورەترین کیشوەری جیهان کامەیە؟', choices: ['ئەفریقا', 'ئاسیا', 'ئەوروپا', 'ئۆسترالیا'], answer: 1 },
+  { q: '٢ + ٨ × ٢ چەندە؟', choices: ['٢٠', '١٨', '١٦', '١٢'], answer: 1 },
+  { q: 'چەند ڕەنگ لە کاشییەکانی ئۆکەیدا هەیە؟', choices: ['٢', '٣', '٤', '٥'], answer: 2 },
+  { q: 'مانگی تەمموز ژمارەی چەندی ساڵە؟', choices: ['٥', '٦', '٧', '٨'], answer: 2 },
+  { q: 'شەممە دوای کام ڕۆژ دێت؟', choices: ['هەینی', 'یەکشەممە', 'چوارشەممە', 'دووشەممە'], answer: 0 },
+  { q: '٥ × ٦ چەندە؟', choices: ['٢٥', '٣٠', '٣٥', '٤٠'], answer: 1 },
 ];
+const colors = { red: '#F15A64', blue: '#5BA9F6', black: '#323B51', yellow: '#E9B746', false: '#A36AEC' };
 
-const rooms=[['🎙️','گفتوگۆی دوستانە','256'],['🔥','چالێنجی گشتی','189'],['🎮','گروپی شادمانی','120'],['💡','زانست و زانیاری','98'],['🎵','گۆرانی و موزیک','76']];
-const ranking=[['1','Aras.KRD','12,450'],['2','Rojan','10,980'],['3','DilanK','9,760'],['4','HawkKrd','8,540'],['5','Sarin 77','7,430']];
-const packs=[['25,000','€0.99'],['50,000','€1.99'],['125,000','€4.99'],['250,000','€9.99'],['500,000','€19.99'],['1,250,000','€49.99'],['2,500,000','€99.99']];
-const gifts=[['🌹','گوڵی سوور','1,000'],['🏆','کۆپا','10,000'],['🦅','هەڵۆی زێڕین','50,000'],['🏰','قەڵای زاگروس','150,000'],['👑','تاجی پاڵەوان','500,000']];
+export default function App() {
+  const [screen, setScreen] = useState('home');
+  const [coins, setCoins] = useState(130);
+  const [wins, setWins] = useState(0);
+  const [name, setName] = useState('یاریزان');
+  const [rooms, setRooms] = useState([]);
+  const [roomName, setRoomName] = useState('');
+  const [room, setRoom] = useState(null);
+  const [mode, setMode] = useState('quiz');
+  const [index, setIndex] = useState(0);
+  const [turn, setTurn] = useState(0);
+  const [points, setPoints] = useState([0, 0]);
+  const [picked, setPicked] = useState(null);
+  const [board, setBoard] = useState(() => okey.startOkey());
+  const [selected, setSelected] = useState(null);
 
-export default function App(){
-  const [screen,setScreen]=useState('home');
-  const [coins,setCoins]=useState(12450);
-  const [score,setScore]=useState(120);
-  const [q,setQ]=useState(0);
-  const [pkYou,setPkYou]=useState(0);
-  const [pkOpp,setPkOpp]=useState(0);
-  const [teamSize,setTeamSize]=useState('4v4');
+  function begin(nextMode) {
+    setMode(nextMode); setIndex(0); setTurn(0); setPoints([0, 0]);
+    setPicked(null); setScreen('question');
+  }
+  function choose(choice) {
+    if (picked !== null) return;
+    setPicked(choice);
+    if (choice === quiz[index].answer) {
+      setPoints(previous => previous.map((value, player) => player === turn ? value + 1 : value));
+      if (mode === 'quiz') setCoins(value => value + 10);
+    }
+  }
+  function next() {
+    if (index === quiz.length - 1) {
+      if (mode === 'quiz' || points[0] > points[1]) setWins(value => value + 1);
+      setScreen('result');
+    } else {
+      setIndex(value => value + 1);
+      setTurn(value => mode === 'pk' ? 1 - value : 0);
+      setPicked(null);
+    }
+  }
+  function createRoom() {
+    const title = roomName.trim();
+    if (!title) return Alert.alert('ناوی ژوور بنووسە');
+    const created = { id: Date.now().toString(), title, host: name.trim() || 'یاریزان' };
+    setRooms(previous => [created, ...previous]); setRoom(created);
+    setRoomName(''); setScreen('room');
+  }
+  function tileLabel(tile) {
+    if (tile.color === 'false') return '★';
+    return okey.isJoker(tile, board.indicator) ? '★' : String(tile.number);
+  }
+  function draw(fromDiscard = false) {
+    if (board.phase !== 'draw') return;
+    if (fromDiscard && !board.discard) return;
+    if (!fromDiscard && !board.stock.length) return Alert.alert('کاشی نەماوە', 'یارییەکی نوێ دەست پێ بکە.');
+    const tile = fromDiscard ? board.discard : board.stock[0];
+    setBoard(previous => ({
+      ...previous, hand: [...previous.hand, tile],
+      discard: fromDiscard ? null : previous.discard,
+      stock: fromDiscard ? previous.stock : previous.stock.slice(1),
+      phase: 'discard',
+    }));
+    setSelected(null);
+  }
+  function discard() {
+    if (board.phase !== 'discard' || selected === null) return;
+    setBoard(previous => ({
+      ...previous, discard: previous.hand[selected],
+      hand: previous.hand.filter((_, position) => position !== selected),
+      phase: 'draw', turns: previous.turns + 1,
+    }));
+    setSelected(null);
+  }
+  function checkHand() {
+    if (board.phase !== 'discard') return Alert.alert('سەرەتا کاشییەک هەڵبگرە');
+    if (!okey.winningHand(board.hand.slice(0, 14), board.indicator) && !board.hand.some((_, i) =>
+      okey.winningHand(board.hand.filter((__, j) => j !== i), board.indicator))) {
+      return Alert.alert('هێشتا تەواو نییە', '١٤ کاشی لە گرووپی ژمارە، زنجیرە یان ٧ جووت ڕێک بخە.');
+    }
+    if (!board.won) { setWins(value => value + 1); setCoins(value => value + 50); }
+    setBoard(previous => ({ ...previous, won: true }));
+    Alert.alert('پیرۆزە! 🏆', '٥٠ کۆینی دیمۆت بردەوە.');
+  }
+  const button = (label, onPress, secondary = false) =>
+    <TouchableOpacity accessibilityRole="button" style={[styles.button, secondary && styles.secondary]} onPress={onPress}>
+      <Text style={[styles.buttonText, secondary && styles.secondaryText]}>{label}</Text>
+    </TouchableOpacity>;
+  const title = text => <Text style={styles.title}>{text}</Text>;
+  const notice = text => <Text style={styles.notice}>{text}</Text>;
+  const header = text => <View style={styles.header}>
+    <TouchableOpacity accessibilityRole="button" onPress={() => setScreen('home')}><Text style={styles.back}>‹</Text></TouchableOpacity>
+    <Text style={styles.headerTitle}>{text}</Text><Text style={styles.balance}>🪙 {coins}</Text>
+  </View>;
+  const nav = <View style={styles.nav}>
+    {[[ '⌂', 'سەرەکی', 'home' ], [ '♛', 'پلەبەندی', 'leaderboard' ], [ '●', 'هەژمار', 'profile' ]].map(([icon, label, destination]) =>
+      <TouchableOpacity key={destination} onPress={() => setScreen(destination)} style={styles.navItem}>
+        <Text style={styles.navIcon}>{icon}</Text><Text style={styles.navLabel}>{label}</Text>
+      </TouchableOpacity>)}
+  </View>;
 
-  const answer=(i)=>{ if(i===questions[q].c){setScore(v=>v+10); if(screen==='pk')setPkYou(v=>v+1);} else if(screen==='pk')setPkOpp(v=>v+1); setQ(v=>(v+1)%questions.length); };
-  const TopBar=({title='Tahadi Plus',back=false})=><View style={s.topBar}>{back?<TouchableOpacity style={s.circleBtn} onPress={()=>setScreen('home')}><Text style={s.circleText}>‹</Text></TouchableOpacity>:<View style={s.avatar}><Text style={s.avatarText}>T+</Text></View>}<View style={{flex:1}}><Text style={s.topTitle}>{title}</Text><Text style={s.topSub}>تەحەدی پڵەس</Text></View><TouchableOpacity style={s.coinPill} onPress={()=>setScreen('shop')}><Text style={s.coinText}>🪙 {coins.toLocaleString()}</Text><Text style={s.plus}>＋</Text></TouchableOpacity></View>;
-  const BottomNav=()=> <View style={s.bottomNav}>{[['🏠','ماڵەوە','home'],['🎮','یاری','rooms'],['🏆','ڕیزبەندی','ranking'],['👥','دوست','team'],['👤','من','profile']].map(([i,l,t])=><TouchableOpacity key={t} style={s.navItem} onPress={()=>setScreen(t)}><Text style={s.navIcon}>{i}</Text><Text style={s.navLabel}>{l}</Text></TouchableOpacity>)}</View>;
-  const Quiz=({pk=false})=><SafeAreaView style={s.safe}><StatusBar barStyle="light-content"/><ScrollView contentContainerStyle={s.page}><TopBar title={pk?'PK':'تەحەدی'} back/>{pk&&<View style={s.pkScoreBox}><View><Text style={s.pkName}>تۆ</Text><Text style={s.pkScore}>{pkYou}</Text></View><Text style={s.vs}>VS</Text><View><Text style={s.pkName}>ڕکابەر</Text><Text style={s.pkScore}>{pkOpp}</Text></View></View>}<View style={s.progress}><View style={[s.progressFill,{width:`${((q+1)/questions.length)*100}%`}]} /></View><Text style={s.counter}>پرسیار {q+1}/{questions.length}   ⭐ {score}</Text><View style={s.questionCard}><Text style={s.question}>{questions[q].q}</Text></View>{questions[q].a.map((x,i)=><TouchableOpacity key={i} style={s.answer} onPress={()=>answer(i)}><Text style={s.answerText}>{x}</Text></TouchableOpacity>)}</ScrollView></SafeAreaView>;
-  if(screen==='quiz')return <Quiz/>; if(screen==='pk')return <Quiz pk/>;
-
-  return <SafeAreaView style={s.safe}><StatusBar barStyle="light-content"/><View style={{flex:1}}><ScrollView contentContainerStyle={s.page} showsVerticalScrollIndicator={false}>
-    {screen==='home'&&<><TopBar/><View style={s.hero}><Text style={s.heroCrown}>👑</Text><Text style={s.heroTitle}>TAHADI PLUS</Text><Text style={s.heroKurdish}>تەحەدی پڵەس</Text><Text style={s.heroSub}>یاری بکە • ڕکابەری بکە • بەرەو سەرەوە بچۆ</Text><TouchableOpacity style={s.playBtn} onPress={()=>setScreen('pk')}><Text style={s.playText}>▶ یاری بکە</Text></TouchableOpacity></View><View style={s.modeRow}>{['PK','1v1','4v4','8v8','12v12'].map(x=><TouchableOpacity key={x} style={s.modeChip} onPress={()=>x==='PK'?setScreen('pk'):(setTeamSize(x),setScreen('team'))}><Text style={s.modeChipText}>{x}</Text></TouchableOpacity>)}</View><View style={s.quickRow}><TouchableOpacity style={s.quickCard} onPress={()=>setScreen('quiz')}><Text style={s.quickIcon}>🧠</Text><Text style={s.quickTitle}>تەحەدی</Text></TouchableOpacity><TouchableOpacity style={s.quickCard} onPress={()=>setScreen('team')}><Text style={s.quickIcon}>⚔️</Text><Text style={s.quickTitle}>کۆنکان</Text></TouchableOpacity><TouchableOpacity style={s.quickCard} onPress={()=>setScreen('shop')}><Text style={s.quickIcon}>🛒</Text><Text style={s.quickTitle}>فرۆشگا</Text></TouchableOpacity></View><Text style={s.sectionTitle}>ڕوومە چالاکەکان</Text>{rooms.slice(0,3).map((r,i)=><TouchableOpacity key={i} style={s.roomCard} onPress={()=>setScreen('rooms')}><Text style={s.roomEmoji}>{r[0]}</Text><View style={{flex:1}}><Text style={s.roomTitle}>{r[1]}</Text><Text style={s.roomSub}>👥 {r[2]}</Text></View><Text style={s.liveText}>LIVE</Text></TouchableOpacity>)}</>}
-
-    {screen==='shop'&&<><TopBar title="فرۆشگای تەحەدی" back/><View style={s.tabs}><View style={s.tabActive}><Text style={s.tabActiveText}>🪙 کۆین</Text></View><View style={s.tab}><Text style={s.tabText}>🎁 دیاری</Text></View><View style={s.tab}><Text style={s.tabText}>👑 VIP</Text></View></View><Text style={s.sectionTitle}>پاکێجی کۆین</Text><View style={s.packGrid}>{packs.map((p,i)=><TouchableOpacity key={i} style={[s.packCard,i===6&&s.packWide]} onPress={()=>setCoins(v=>v+Number(p[0].replace(/,/g,'')))}><Text style={s.packIcon}>{i<2?'🪙':i<5?'💰':'🧰'}</Text><Text style={s.packAmount}>{p[0]}</Text><Text style={s.packLabel}>کۆین</Text><View style={s.priceBtn}><Text style={s.priceText}>{p[1]}</Text></View>{i===3&&<Text style={s.ribbon}>زۆرترین فرۆش</Text>}{i===6&&<Text style={s.ribbon}>باشترین نرخ</Text>}</TouchableOpacity>)}</View><Text style={s.sectionTitle}>دیارییە تایبەتەکان</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:10,paddingBottom:8}}>{gifts.map((g,i)=><View key={i} style={s.giftCard}><Text style={s.giftIcon}>{g[0]}</Text><Text style={s.giftName}>{g[1]}</Text><Text style={s.giftPrice}>🪙 {g[2]}</Text></View>)}</ScrollView><View style={s.vipCard}><Text style={s.vipBig}>👑 VIP</Text><View style={{flex:1,paddingHorizontal:12}}><Text style={s.vipTitle}>تەحەدی VIP</Text><Text style={s.vipSub}>ڕوومی تایبەت • دیاری تایبەت • badge • پڕۆفایلی زێڕین</Text></View><View style={s.vipPrice}><Text style={s.vipPriceText}>€4.99</Text></View></View></>}
-
-    {screen==='rooms'&&<><TopBar title="ڕوومەکان" back/><Text style={s.sectionTitle}>گفتوگۆ و یاری</Text>{rooms.map((r,i)=><View key={i} style={s.roomCard}><Text style={s.roomEmoji}>{r[0]}</Text><View style={{flex:1}}><Text style={s.roomTitle}>{r[1]}</Text><Text style={s.roomSub}>👥 {r[2]} بەشداربوو</Text></View><Text style={s.liveText}>LIVE</Text></View>)}</>}
-
-    {screen==='ranking'&&<><TopBar title="ڕیزبەندی" back/><View style={s.podium}><Text style={{fontSize:52}}>🏆</Text><Text style={s.podiumTitle}>باشترین یاریزانەکان</Text></View>{ranking.map((r,i)=><View key={i} style={s.rankRow}><Text style={s.rankNo}>{r[0]}</Text><Text style={s.rankName}>{r[1]}</Text><Text style={s.rankCoins}>🪙 {r[2]}</Text></View>)}</>}
-
-    {screen==='profile'&&<><TopBar title="پڕۆفایل" back/><View style={s.profileCard}><Text style={{fontSize:60}}>👤</Text><Text style={s.profileName}>KurdPlayer</Text><Text style={s.profileTag}>Challenge is Life 👑</Text><View style={s.profileStats}><View><Text style={s.statNum}>{coins.toLocaleString()}</Text><Text style={s.statLabel}>کۆین</Text></View><View><Text style={s.statNum}>24</Text><Text style={s.statLabel}>بردنەوە</Text></View><View><Text style={s.statNum}>12</Text><Text style={s.statLabel}>ئاست</Text></View></View></View></>}
-
-    {screen==='team'&&<><TopBar title="شەڕی تیمەکان" back/><View style={s.teamBanner}><Text style={s.teamMode}>{teamSize}</Text><Text style={s.teamTitle}>تیمی خۆت ئامادە بکە</Text><Text style={s.teamSub}>هاوڕێکانت بانگ بکە و پێکەوە یاری بکەن</Text></View><View style={s.teamsWrap}><View style={[s.teamPanel,{backgroundColor:'#29131A'}]}><Text style={s.redTitle}>🔴 تیمی سوور</Text>{['Aras.KRD','Sarin 77','DilanK','＋ یاریزان'].map((x,i)=><Text key={i} style={s.playerName}>{i<3?'✅ ':'➕ '}{x}</Text>)}</View><View style={[s.teamPanel,{backgroundColor:'#10243B'}]}><Text style={s.blueTitle}>🔵 تیمی شین</Text>{['Rojan','Zagros.95','HawkKrd','＋ یاریزان'].map((x,i)=><Text key={i} style={s.playerName}>{i<3?'✅ ':'➕ '}{x}</Text>)}</View></View><View style={s.voiceBox}><Text style={s.voiceTitle}>🎙️ دەنگی تیم</Text><Text style={s.voiceOn}>🎤 کراوە   🔊 تیم</Text></View><TouchableOpacity style={s.readyBtn}><Text style={s.readyText}>ئامادەم</Text></TouchableOpacity></>}
-  </ScrollView><BottomNav/></View></SafeAreaView>;
+  return <SafeAreaView style={styles.safe}><StatusBar barStyle="light-content" />
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.page}>
+      {screen === 'home' && <>
+        <View style={styles.homeHeader}><Text style={styles.logo}>T+</Text><View><Text style={styles.small}>بەخێربێیتەوە</Text><Text style={styles.heading}>Tahadi Plus</Text></View></View>
+        <View style={styles.hero}><Text style={styles.heroSmall}>🔥 تەحەدای ئەمڕۆ</Text>
+          <Text style={styles.heroTitle}>ئامادەی بۆ بردنەوە؟</Text><Text style={styles.heroCopy}>پرسیارەکان تاقی بکە و کۆینی دیمۆ کۆ بکەرەوە.</Text>
+          {button('دەست پێ بکە', () => begin('quiz'), true)}</View>
+        <View style={styles.stats}><Text style={styles.stat}>🪙 {coins}{'\n'}<Text style={styles.small}>کۆینی دیمۆ</Text></Text>
+          <Text style={styles.stat}>🏆 {wins}{'\n'}<Text style={styles.small}>بردنەوە</Text></Text>
+          <Text style={styles.stat}>🎮 {rooms.length}{'\n'}<Text style={styles.small}>ژوور</Text></Text></View>
+        {title('جۆری یارییەکان')}
+        {[['🎙️', 'کۆنکان و ژوورەکان', 'ژووری تایبەت دروست بکە و هاوبەشی بکە', 'rooms'],
+          ['🧠', 'تەحەدا و پرسیار', 'پرسیار و وەڵام بۆ خاڵ', 'quiz'],
+          ['⚔️', 'PK دوو یاریزان', 'پاس کردنی مۆبایل لە نێوان دوو کەس', 'pk'],
+          ['🀄', 'ئۆکەی', '١٤ کاشی، هەڵگرتن و فڕێدان', 'okey']].map(([icon, label, detail, destination]) =>
+          <TouchableOpacity key={destination} style={styles.modeCard} onPress={() =>
+            destination === 'quiz' || destination === 'pk' ? begin(destination) : setScreen(destination)}>
+            <Text style={styles.modeIcon}>{icon}</Text><View style={{ flex: 1 }}><Text style={styles.modeName}>{label}</Text>
+              <Text style={styles.modeDetail}>{detail}</Text></View><Text style={styles.arrow}>‹</Text>
+          </TouchableOpacity>)}
+        {notice('ئەمە وەشانی تاقیکردنەوەی iPhone ـە: یاری و کۆین لەسەر ئەم مۆبایلەن؛ ژووری LIVE و پارەدان هێشتا نەکراون.')}
+      </>}
+      {screen === 'rooms' && <>{header('کۆنکان و ژوورەکان')}{title('ژووری دیمۆ دروست بکە')}
+        {notice('ژوورەکان تەنها لەم سێشنەی مۆبایلە دان. دەنگ و هاوڕێی ئۆنلاین هێشتا پەیوەست نەکراون.')}
+        <TextInput style={styles.input} value={roomName} onChangeText={setRoomName}
+          placeholder="ناوی ژوور" placeholderTextColor="#8895A9" maxLength={36} />
+        {button('＋ دروستکردنی ژوور', createRoom)}
+        {rooms.length ? rooms.map(item => <TouchableOpacity key={item.id} style={styles.modeCard}
+          onPress={() => { setRoom(item); setScreen('room'); }}><Text style={styles.modeIcon}>🎙️</Text>
+          <View style={{ flex: 1 }}><Text style={styles.modeName}>{item.title}</Text>
+            <Text style={styles.modeDetail}>خاوەن: {item.host} · ناوخۆیی</Text></View></TouchableOpacity>)
+          : notice('هێشتا هیچ ژوورێک دروست نەکراوە.')}</>}
+      {screen === 'room' && <>{header(room?.title || 'ژوور')}{title('🎙️ ' + (room?.title || ''))}
+        {notice('ئەندام: ' + (room?.host || name) + '. ئەم ژوورە دیمۆی ناوخۆییە؛ میکرۆفۆن و بانگهێشتنی ئۆنلاین نییە.')}
+        {button('⚔️ تەحەدای دوو کەس لە هەمان iPhone', () => begin('pk'))}
+        {button('🧠 پرسیارەکانی ژوور', () => begin('quiz'), true)}
+        {button('دەرچوون لە ژوور', () => setScreen('rooms'), true)}</>}
+      {screen === 'question' && <>{header(mode === 'pk' ? 'PK' : 'تەحەدا')}
+        {mode === 'pk' && notice('یاریزانی ' + (turn + 1) + ' ـەم · پرسیاری جیاوازی هەر یاریزان؛ مۆبایلەکە پاس بکە.')}
+        <View style={styles.stats}><Text style={styles.stat}>یاریزانی ١: {points[0]}</Text>
+          {mode === 'pk' && <Text style={styles.stat}>یاریزانی ٢: {points[1]}</Text>}</View>
+        <Text style={styles.small}>پرسیاری {index + 1} / {quiz.length}</Text>
+        <View style={styles.question}><Text style={styles.questionText}>{quiz[index].q}</Text></View>
+        {quiz[index].choices.map((choice, i) => <TouchableOpacity key={i} disabled={picked !== null}
+          onPress={() => choose(i)} style={[styles.choice,
+            picked !== null && i === quiz[index].answer && styles.correct,
+            picked === i && i !== quiz[index].answer && styles.incorrect]}>
+          <Text style={styles.choiceText}>{choice}</Text></TouchableOpacity>)}
+        {picked !== null && <>{notice(picked === quiz[index].answer ? 'وەڵامی ڕاستە! ✨' : 'وەڵامی ڕاست: ' + quiz[index].choices[quiz[index].answer])}
+          {button('پرسیاری دواتر', next)}</>}</>}
+      {screen === 'result' && <>{header('ئەنجام')}{title('🏆 ئەنجامی یاری')}
+        <View style={styles.result}><Text style={styles.resultText}>یاریزانی ١: {points[0]} / {mode === 'pk' ? quiz.length / 2 : quiz.length}</Text>
+          {mode === 'pk' && <Text style={styles.resultText}>یاریزانی ٢: {points[1]} / {quiz.length / 2}</Text>}
+          <Text style={styles.small}>{mode === 'pk' ? (points[0] === points[1] ? 'یەکسانن!' : 'براوە: یاریزانی ' + (points[0] > points[1] ? '١' : '٢')) : 'هەر وەڵامێکی ڕاست ١٠ کۆینی دیمۆیە.'}</Text></View>
+        {button('دووبارە یاری بکە', () => begin(mode))}{button('بگەڕێوە سەرەکی', () => setScreen('home'), true)}</>}
+      {screen === 'okey' && <>{header('یاری ئۆکەی')}{title('🀄 ئۆکەی — تاقیکردنەوەی تاکەکەسی')}
+        {notice('کاشییەک هەڵبگرە، پاشان یەکێک فڕێ بدە. ١٤ کاشی بە زنجیرە/ژمارە یان ٧ جووت ڕێک بخە.')}
+        <View style={styles.stats}><Text style={styles.stat}>دەست: {board.turns}</Text>
+          <Text style={styles.stat}>بەشی ماوە: {board.stock.length}</Text></View>
+        <Text style={styles.small}>نیشاندەر: {board.indicator.number} · {board.indicator.color} | جوکەر: {okey.jokerFor(board.indicator).number}</Text>
+        <View style={styles.tileRow}>{board.hand.map((tile, i) => <TouchableOpacity key={tile.id}
+          onPress={() => setSelected(i)} style={[styles.tile, { borderColor: colors[tile.color] },
+            selected === i && styles.selectedTile]}>
+          <Text style={[styles.tileText, { color: colors[tile.color] }]}>{tileLabel(tile)}</Text></TouchableOpacity>)}</View>
+        {notice('فڕێدراو: ' + (board.discard ? board.discard.number + ' · ' + board.discard.color : 'نییە'))}
+        {board.phase === 'draw' ? <>
+          {button('کاشی لە کۆگاکە هەڵبگرە', () => draw(false))}
+          {board.discard && button('کاشی فڕێدراو هەڵبگرە', () => draw(true), true)}
+        </> : <>{button('دەستەکەم تەواوە؟', checkHand)}
+          {button('کاشی دیاریکراو فڕێ بدە', discard, true)}</>}
+        {button('یاری ئۆکەیی نوێ', () => { setBoard(okey.startOkey()); setSelected(null); }, true)}
+        {notice('ئەمە وەشانی فێربوونی تاکەکەسییە؛ ڕکابەری ٤ کەسی ئۆنلاین دواتر پێویستی بە سێرڤەرە.')}</>}
+      {screen === 'leaderboard' && <>{header('پلەبەندی')}{title('🏆 پلەبەندی ئەم مۆبایلە')}
+        <View style={styles.modeCard}><Text style={styles.modeIcon}>🥇</Text><View>
+          <Text style={styles.modeName}>{name || 'یاریزان'}</Text><Text style={styles.modeDetail}>{wins} بردنەوە · {coins} کۆین</Text></View></View>
+        {notice('پلەبەندی گشتی و یاریزانانی LIVE هێشتا پەیوەست نەکراون.')}</>}
+      {screen === 'profile' && <>{header('هەژمار')}{title('👤 پرۆفایلی ناوخۆیی')}
+        <TextInput style={styles.input} value={name} onChangeText={setName}
+          placeholder="ناوی یاریزان" placeholderTextColor="#8895A9" maxLength={24} />
+        <View style={styles.stats}><Text style={styles.stat}>🪙 {coins} کۆین</Text>
+          <Text style={styles.stat}>🏆 {wins} بردنەوە</Text></View>
+        {button('کۆینەکان', () => setScreen('wallet'))}
+        {notice('ئەم داتایە تا ئەپەکە داخەیت لە بیرگەدایە؛ هەژماری ڕاستەقینە هێشتا نییە.')}</>}
+      {screen === 'wallet' && <>{header('کۆین')}{title('🪙 کۆینی دیمۆ')}
+        <View style={styles.result}><Text style={styles.heroTitle}>{coins} کۆین</Text></View>
+        {notice('لە تەحەدای پرسیاردا هەر وەڵامێکی ڕاست ١٠ کۆین دەدات؛ بردنەوەی ئۆکەی ٥٠ کۆین. کڕینی کۆین و نرخەکان لەم وەشانەدا بەردەست نین.')}
+        {button('دەست پێ بکە بە تەحەدا', () => begin('quiz'))}</>}
+    </ScrollView>
+    {['home', 'leaderboard', 'profile'].includes(screen) && nav}
+  </SafeAreaView>;
 }
 
-const s=StyleSheet.create({
-  safe:{flex:1,backgroundColor:NAVY},page:{padding:16,paddingBottom:110},topBar:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:18},circleBtn:{width:44,height:44,borderRadius:22,backgroundColor:CARD,alignItems:'center',justifyContent:'center'},circleText:{color:GOLD2,fontSize:34},avatar:{width:46,height:46,borderRadius:23,backgroundColor:GOLD,alignItems:'center',justifyContent:'center'},avatarText:{fontWeight:'900',color:NAVY},topTitle:{color:WHITE,fontSize:20,fontWeight:'900',textAlign:'right'},topSub:{color:MUTED,fontSize:11,textAlign:'right'},coinPill:{flexDirection:'row',alignItems:'center',backgroundColor:CARD,borderWidth:1,borderColor:'#5B4520',padding:9,borderRadius:18,gap:5},coinText:{color:GOLD2,fontWeight:'800'},plus:{color:NAVY,backgroundColor:GOLD,borderRadius:11,paddingHorizontal:3,fontWeight:'900'},hero:{backgroundColor:'#101827',borderRadius:28,borderWidth:1,borderColor:'#604411',padding:24,alignItems:'center',marginBottom:16},heroCrown:{fontSize:46},heroTitle:{color:GOLD2,fontSize:30,fontWeight:'900'},heroKurdish:{color:WHITE,fontSize:25,fontWeight:'900'},heroSub:{color:MUTED,fontSize:12,marginTop:8},playBtn:{marginTop:20,backgroundColor:GOLD,padding:15,borderRadius:17,width:'100%'},playText:{textAlign:'center',color:NAVY,fontSize:20,fontWeight:'900'},modeRow:{flexDirection:'row-reverse',gap:8,marginBottom:14},modeChip:{flex:1,backgroundColor:CARD,paddingVertical:11,borderRadius:14},modeChipText:{color:WHITE,textAlign:'center',fontWeight:'800'},quickRow:{flexDirection:'row-reverse',gap:10,marginBottom:18},quickCard:{flex:1,backgroundColor:CARD,borderRadius:18,padding:13,alignItems:'center'},quickIcon:{fontSize:28},quickTitle:{color:WHITE,fontWeight:'900',fontSize:15},sectionTitle:{color:WHITE,fontSize:20,fontWeight:'900',textAlign:'right',marginTop:10,marginBottom:12},roomCard:{flexDirection:'row-reverse',alignItems:'center',backgroundColor:CARD,marginBottom:10,borderRadius:19,padding:12,gap:10},roomEmoji:{fontSize:28},roomTitle:{color:WHITE,textAlign:'right',fontWeight:'900'},roomSub:{color:MUTED,textAlign:'right',fontSize:11},liveText:{color:'#51E6A8',fontWeight:'900'},progress:{height:8,backgroundColor:'#1F2B3D',borderRadius:8,overflow:'hidden'},progressFill:{height:'100%',backgroundColor:GOLD},counter:{color:MUTED,textAlign:'right',marginVertical:12},questionCard:{backgroundColor:WHITE,borderRadius:22,padding:24,marginBottom:16},question:{color:NAVY,fontWeight:'900',fontSize:23,textAlign:'right'},answer:{backgroundColor:CARD,padding:17,borderRadius:16,marginBottom:10},answerText:{color:WHITE,textAlign:'right',fontSize:18,fontWeight:'800'},pkScoreBox:{flexDirection:'row',justifyContent:'space-around',backgroundColor:CARD,borderRadius:22,padding:18},pkName:{color:MUTED,textAlign:'center'},pkScore:{color:WHITE,fontSize:34,fontWeight:'900',textAlign:'center'},vs:{color:GOLD,fontSize:23,fontWeight:'900'},tabs:{flexDirection:'row-reverse',backgroundColor:CARD,borderRadius:18,padding:5},tabActive:{flex:1,backgroundColor:GOLD,borderRadius:14,padding:11},tabActiveText:{color:NAVY,textAlign:'center',fontWeight:'900'},tab:{flex:1,padding:11},tabText:{color:MUTED,textAlign:'center',fontWeight:'800'},packGrid:{flexDirection:'row-reverse',flexWrap:'wrap',justifyContent:'space-between'},packCard:{width:'48.5%',backgroundColor:CARD,borderRadius:20,padding:16,alignItems:'center',marginBottom:12,borderWidth:1,borderColor:'#5B4520',position:'relative'},packWide:{width:'100%'},packIcon:{fontSize:34},packAmount:{color:GOLD2,fontSize:22,fontWeight:'900'},packLabel:{color:MUTED},priceBtn:{backgroundColor:GOLD,marginTop:10,paddingVertical:8,paddingHorizontal:24,borderRadius:14},priceText:{color:NAVY,fontWeight:'900'},ribbon:{position:'absolute',top:8,right:8,color:'#fff',backgroundColor:'#C72525',paddingHorizontal:7,paddingVertical:3,borderRadius:8,fontSize:9,fontWeight:'900'},giftCard:{width:120,backgroundColor:'#FFF8E8',borderRadius:18,padding:13,alignItems:'center'},giftIcon:{fontSize:35},giftName:{color:NAVY,fontWeight:'800',marginTop:6,fontSize:12},giftPrice:{color:'#9A6700',fontWeight:'900',fontSize:11,marginTop:5},vipCard:{flexDirection:'row-reverse',alignItems:'center',backgroundColor:'#151D28',borderWidth:1,borderColor:GOLD,borderRadius:22,padding:15,marginTop:18},vipBig:{color:GOLD2,fontSize:24,fontWeight:'900'},vipTitle:{color:WHITE,textAlign:'right',fontWeight:'900'},vipSub:{color:MUTED,textAlign:'right',fontSize:10},vipPrice:{backgroundColor:GOLD,borderRadius:12,padding:9},vipPriceText:{color:NAVY,fontWeight:'900'},podium:{alignItems:'center',backgroundColor:CARD,borderRadius:24,padding:22},podiumTitle:{color:WHITE,fontSize:22,fontWeight:'900'},rankRow:{flexDirection:'row',alignItems:'center',backgroundColor:CARD,marginTop:9,borderRadius:16,padding:12},rankNo:{width:30,color:GOLD2,fontSize:18,fontWeight:'900'},rankName:{flex:1,color:WHITE,fontWeight:'800'},rankCoins:{color:GOLD2,fontWeight:'800'},profileCard:{backgroundColor:CARD,borderRadius:26,padding:22,alignItems:'center'},profileName:{color:WHITE,fontSize:25,fontWeight:'900'},profileTag:{color:MUTED},profileStats:{flexDirection:'row-reverse',justifyContent:'space-around',width:'100%',marginTop:20},statNum:{color:GOLD2,fontSize:20,fontWeight:'900',textAlign:'center'},statLabel:{color:MUTED,fontSize:11,textAlign:'center'},teamBanner:{backgroundColor:CARD,borderRadius:24,padding:20,alignItems:'center'},teamMode:{color:GOLD2,fontSize:28,fontWeight:'900'},teamTitle:{color:WHITE,fontSize:22,fontWeight:'900'},teamSub:{color:MUTED,fontSize:11},teamsWrap:{flexDirection:'row',gap:10,marginTop:14},teamPanel:{flex:1,borderRadius:20,padding:12},redTitle:{color:'#FF718D',fontWeight:'900',textAlign:'center'},blueTitle:{color:'#64B5FF',fontWeight:'900',textAlign:'center'},playerName:{color:WHITE,fontSize:11,fontWeight:'700',paddingVertical:8},voiceBox:{backgroundColor:CARD,borderRadius:20,padding:14,marginTop:12},voiceTitle:{color:WHITE,fontWeight:'900',textAlign:'right'},voiceOn:{color:'#55E0A6',marginTop:8,textAlign:'right'},readyBtn:{backgroundColor:GOLD,borderRadius:18,padding:17,marginTop:16},readyText:{color:NAVY,fontSize:23,fontWeight:'900',textAlign:'center'},bottomNav:{position:'absolute',bottom:0,left:0,right:0,height:82,backgroundColor:'#0B1625',borderTopWidth:1,borderTopColor:'#24344A',flexDirection:'row',justifyContent:'space-around',paddingTop:9},navItem:{alignItems:'center'},navIcon:{fontSize:22},navLabel:{color:MUTED,fontSize:10,marginTop:3}
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: NAVY },
+  page: { padding: 20, paddingBottom: 110 },
+  homeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 15 },
+  logo: { color: '#fff', backgroundColor: '#563DEE', borderRadius: 20, padding: 18, fontSize: 23, fontWeight: '900' },
+  heading: { color: '#fff', fontSize: 26, fontWeight: '900', textAlign: 'right' },
+  small: { color: '#AAB8CD', fontSize: 14, textAlign: 'right', marginVertical: 6 },
+  hero: { backgroundColor: '#583EED', borderRadius: 30, padding: 24, marginVertical: 15 },
+  heroSmall: { color: '#E4DFFF', fontSize: 18, textAlign: 'right', fontWeight: '700' },
+  heroTitle: { color: '#fff', fontWeight: '900', fontSize: 31, textAlign: 'right', marginTop: 16 },
+  heroCopy: { color: '#E4DFFF', textAlign: 'right', marginVertical: 12, fontSize: 16 },
+  button: { backgroundColor: GOLD, borderRadius: 16, padding: 15, marginVertical: 7 },
+  buttonText: { color: NAVY, fontSize: 17, fontWeight: '900', textAlign: 'center' },
+  secondary: { backgroundColor: PALE },
+  secondaryText: { color: '#5841DF' },
+  stats: { backgroundColor: CARD, borderRadius: 20, flexDirection: 'row', justifyContent: 'space-around', padding: 18, marginVertical: 12 },
+  stat: { color: '#fff', textAlign: 'center', fontSize: 19, fontWeight: '800' },
+  title: { color: '#fff', fontSize: 25, fontWeight: '900', textAlign: 'right', marginVertical: 18 },
+  notice: { color: '#AAB8CD', fontSize: 15, lineHeight: 26, textAlign: 'right', marginVertical: 12 },
+  modeCard: { backgroundColor: CARD, borderRadius: 19, padding: 18, marginVertical: 6, flexDirection: 'row', alignItems: 'center' },
+  modeIcon: { fontSize: 30, marginRight: 15 },
+  modeName: { color: '#fff', fontWeight: '900', fontSize: 20, textAlign: 'right' },
+  modeDetail: { color: '#AAB8CD', fontSize: 13, textAlign: 'right', marginTop: 4 },
+  arrow: { color: GOLD, fontSize: 30, marginLeft: 10 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  back: { color: GOLD, fontSize: 38, marginRight: 14 },
+  headerTitle: { color: '#fff', fontWeight: '900', fontSize: 22, flex: 1, textAlign: 'right' },
+  balance: { color: GOLD, fontSize: 16, marginLeft: 9 },
+  input: { backgroundColor: CARD, color: '#fff', borderRadius: 14, padding: 16, fontSize: 18, textAlign: 'right', marginVertical: 9 },
+  question: { backgroundColor: PALE, borderRadius: 22, padding: 30, marginVertical: 20 },
+  questionText: { fontSize: 24, fontWeight: '900', color: NAVY, textAlign: 'right' },
+  choice: { backgroundColor: CARD, padding: 17, marginVertical: 6, borderRadius: 15 },
+  choiceText: { color: '#fff', textAlign: 'right', fontSize: 18 },
+  correct: { backgroundColor: '#167D5F' }, incorrect: { backgroundColor: '#A63F4B' },
+  result: { backgroundColor: CARD, borderRadius: 20, padding: 25, marginVertical: 15 },
+  resultText: { color: '#fff', fontSize: 21, textAlign: 'right', marginVertical: 5 },
+  tileRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginVertical: 15 },
+  tile: { backgroundColor: PALE, borderWidth: 3, borderRadius: 9, width: 43, height: 57, justifyContent: 'center', alignItems: 'center', margin: 3 },
+  selectedTile: { transform: [{ translateY: -10 }], backgroundColor: '#FFE9B0' },
+  tileText: { fontSize: 22, fontWeight: '900' },
+  nav: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#101D30', borderTopWidth: 1, borderColor: '#304054', paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-around' },
+  navItem: { alignItems: 'center' }, navIcon: { color: GOLD, fontSize: 25 }, navLabel: { color: '#AAB8CD', fontSize: 12 },
 });
