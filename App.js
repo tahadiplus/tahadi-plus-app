@@ -16,6 +16,14 @@ const quiz = [
   { q: '٥ × ٦ چەندە؟', choices: ['٢٥', '٣٠', '٣٥', '٤٠'], answer: 1 },
 ];
 const colors = { red: '#F15A64', blue: '#5BA9F6', black: '#323B51', yellow: '#E9B746', false: '#A36AEC' };
+const ROOM_PREVIEWS = [
+  { title: 'دیوەخانی شێخە', category: 'ژوور', caption: 'گفتوگۆ و هاوڕێیەتی', icon: '🏰', tint: '#F3D79C' },
+  { title: 'یاریی کۆنکان', category: 'کۆنکان', caption: 'مێزی قەڵای زاگرۆس', icon: '🀄', tint: '#D9EAD8' },
+  { title: 'تەحەدای زانیاری', category: 'تەحەدی', caption: 'پرسیار و ڕکابەری', icon: '🧠', tint: '#EFE0FF' },
+  { title: 'ڕکابەری پاڵەوانان', category: 'تەحەدی', caption: 'یەک بە یەک لە ئایفۆن', icon: '⚔️', tint: '#FCDDD7' },
+  { title: 'هاوڕێی زاگرۆس', category: 'ژوور', caption: 'ژووری تایبەتی هاوڕێکان', icon: '🌄', tint: '#DCEBF5' },
+  { title: 'مێزی ئۆکەی', category: 'کۆنکان', caption: 'کاشی و جوکەر', icon: '🀄', tint: '#FBE6BB' },
+];
 
 export default function App() {
   const [screen, setScreen] = useState('home');
@@ -26,6 +34,7 @@ export default function App() {
   const [roomName, setRoomName] = useState('');
   const [room, setRoom] = useState(null);
   const [roomMode, setRoomMode] = useState('1v1');
+  const [roomFilter, setRoomFilter] = useState('هەموو');
   const [inventory, setInventory] = useState({ rose: 0, crown: 0, trophy: 0, eagle: 0, zagros: 0 });
   const [mode, setMode] = useState('quiz');
   const [index, setIndex] = useState(0);
@@ -169,16 +178,19 @@ export default function App() {
     <TouchableOpacity accessibilityRole="button" onPress={() => setScreen('wallet')} style={styles.coinChip}>
       <Text style={styles.balance}>🪙 {coins} ＋</Text></TouchableOpacity>
   </View>;
-  const nav = <View style={styles.nav}>
+  const nav = <View style={[styles.nav, screen === 'rooms' && styles.navWarm]}>
     {[[ '⌂', 'ماڵەوە', 'home' ], [ '◈', 'ژوورەکان', 'rooms' ], [ '♛', 'پلەکان', 'leaderboard' ],
       [ '◉', 'کۆین', 'wallet' ], [ '●', 'هەژمار', 'profile' ]].map(([icon, label, destination]) =>
       <TouchableOpacity key={destination} accessibilityRole="button" onPress={() => setScreen(destination)} style={styles.navItem}>
-        <Text style={[styles.navIcon, screen === destination && styles.navActive]}>{icon}</Text>
-        <Text style={[styles.navLabel, screen === destination && styles.navActive]}>{label}</Text>
+        <Text style={[styles.navIcon, screen === 'rooms' && styles.navIconWarm,
+          screen === destination && (screen === 'rooms' ? styles.navActiveWarm : styles.navActive)]}>{icon}</Text>
+        <Text style={[styles.navLabel, screen === 'rooms' && styles.navLabelWarm,
+          screen === destination && (screen === 'rooms' ? styles.navActiveWarm : styles.navActive)]}>{label}</Text>
       </TouchableOpacity>)}
   </View>;
 
-  return <SafeAreaView style={styles.safe}><StatusBar barStyle="light-content" />
+  return <SafeAreaView style={[styles.safe, screen === 'rooms' && styles.safeRooms]}>
+    <StatusBar barStyle={screen === 'rooms' ? 'dark-content' : 'light-content'} />
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.page}>
       {screen === 'home' && <>
         <View style={styles.homeHeader}>
@@ -230,38 +242,77 @@ export default function App() {
           </TouchableOpacity>)}
         {notice('وەشانی تاقیکردنەوە: یاری لەم مۆبایلەدایە؛ دەنگ، یاریزانی ئۆنلاین و پارەدانی ڕاستەقینە هێشتا نییە.')}
       </>}
-      {screen === 'rooms' && <>{header('ژوورەکان')}
-        <View style={styles.sectionHero}><Text style={styles.sectionIcon}>◈</Text>
-          <Text style={styles.sectionHeading}>دیوەخانی یاری</Text>
-          <Text style={styles.sectionCopy}>ژووری گشتی و تایبەت، بە شێوەی تاقیکردنەوەی ناوخۆیی.</Text>
+      {screen === 'rooms' && <>
+        <View style={styles.roomsHeader}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="گەڕانەوە سەرەکی"
+            onPress={() => setScreen('home')}><Text style={styles.roomsSearch}>⌂</Text></TouchableOpacity>
+          <View style={styles.roomsHeadingBox}><Text style={styles.roomsEyebrow}>تەحەدی پڵەس</Text>
+            <Text style={styles.roomsHeading}>ژوورەکان</Text></View>
+          <KurdistanFlag width={39} height={26} />
         </View>
-        {title('دۆخی ژوور')}
-        <View style={styles.modeGrid}>{['1v1', '4v4', '8v8', '12v12'].map(item =>
-          <TouchableOpacity key={item} accessibilityRole="button" style={[styles.modeSelect,
-            roomMode === item && styles.modeSelectActive]} onPress={() => setRoomMode(item)}>
-            <Text style={[styles.modeSelectText, roomMode === item && { color: NAVY }]}>{item}</Text>
-          </TouchableOpacity>)}</View>
-        <TextInput style={styles.input} value={roomName} onChangeText={setRoomName}
-          placeholder="ناوی ژوورەکەت بنووسە" placeholderTextColor="#9A91A1" maxLength={36} />
-        {button('＋ ژووری تایبەت دروست بکە', createRoom)}
-        {title('◈ ژووری گشتی')}
-        <View style={styles.roomNotice}><Text style={styles.roomNoticeTitle}>بەشی ئۆنلاین هێشتا بەردەست نییە</Text>
-          <Text style={styles.modeDetail}>یاریزانانی ساختە نیشان نادرێن. بۆ هاوڕێی لە مۆبایلی تر سێرڤەر پێویستە.</Text></View>
-        {title('ژوورەکانی تۆ')}
-        {rooms.length ? rooms.map(item => <TouchableOpacity key={item.id} accessibilityRole="button"
-          style={styles.modeCard} onPress={() => { setRoom(item); setScreen('room'); }}>
-          <View style={styles.modeIconBox}><Text style={styles.modeIcon}>🎙️</Text></View>
-          <View style={styles.modeBody}><Text style={styles.modeName}>{item.title}</Text>
-            <Text style={styles.modeDetail}>{item.mode} · خاوەن: {item.host} · ناوخۆیی</Text></View>
-          {badge('چوونەژوور')}</TouchableOpacity>) : notice('هێشتا هیچ ژوورێکی تایبەتت نییە.')}</>}
+        <ImageBackground source={require('./assets/zagros-citadel.jpg')} style={styles.roomsBanner}
+          imageStyle={styles.roomsBannerImage} resizeMode="cover">
+          <View style={styles.roomsBannerShade}><Text style={styles.roomsBannerTitle}>قەڵای زاگرۆس 🏰</Text>
+            <Text style={styles.roomsBannerCopy}>بەخێربێیت بۆ دیوەخانی یاری</Text></View>
+        </ImageBackground>
+        <TouchableOpacity accessibilityRole="button" style={styles.roomsGiftBanner} onPress={() => setScreen('wallet')}>
+          <Text style={styles.roomsGiftIcon}>🌼</Text>
+          <Text style={styles.roomsGiftText}>دیارییەکانی ژوور و کۆینی دیمۆ</Text>
+          <Text style={styles.roomsGiftArrow}>‹</Text>
+        </TouchableOpacity>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roomsFilters}>
+          {['هەموو', 'ژوور', 'کۆنکان', 'تەحەدی', 'ژوورەکانی تۆ'].map(item =>
+            <TouchableOpacity key={item} accessibilityRole="button" accessibilityState={{ selected: roomFilter === item }}
+              onPress={() => setRoomFilter(item)} style={[styles.roomsFilter,
+                roomFilter === item && styles.roomsFilterActive]}>
+              <Text style={[styles.roomsFilterText, roomFilter === item && styles.roomsFilterTextActive]}>{item}</Text>
+            </TouchableOpacity>)}
+        </ScrollView>
+        {roomFilter !== 'ژوورەکانی تۆ' && ROOM_PREVIEWS.filter(item => roomFilter === 'هەموو' || item.category === roomFilter).map((item, index) =>
+          <TouchableOpacity key={item.title} accessibilityRole="button" style={styles.previewRoomCard}
+            onPress={() => { setRoom({ title: item.title, host: 'نموونە', mode: 'ڕووکاری تاقیکردنەوە', preview: true }); setScreen('room'); }}>
+            <View style={styles.previewRoomSide}><Text style={styles.previewRoomNumber}>٠{index + 1}</Text>
+              <Text style={styles.previewRoomBadge}>نموونە</Text></View>
+            <View style={styles.previewRoomInfo}><Text style={styles.previewRoomTitle}>{item.title}</Text>
+              <Text style={styles.previewRoomCaption}>{item.caption}</Text>
+              <Text style={styles.previewRoomCategory}>{item.category} · دیزاینی پێشەکی</Text></View>
+            <View style={[styles.previewRoomThumb, { backgroundColor: item.tint }]}>
+              <Text style={styles.previewRoomEmoji}>{item.icon}</Text></View>
+          </TouchableOpacity>)}
+        {roomFilter === 'ژوورەکانی تۆ' && !rooms.length &&
+          <Text style={styles.roomsEmpty}>هێشتا ژووری خۆت دروست نەکردووە.</Text>}
+        {rooms.length > 0 && (roomFilter === 'هەموو' || roomFilter === 'ژوورەکانی تۆ') && <>
+          <Text style={styles.roomsSubheading}>ژوورەکانی تۆ</Text>
+          {rooms.map(item => <TouchableOpacity key={item.id} accessibilityRole="button" style={styles.previewRoomCard}
+            onPress={() => { setRoom(item); setScreen('room'); }}>
+            <View style={styles.previewRoomSide}><Text style={styles.previewRoomBadge}>ناوخۆیی</Text></View>
+            <View style={styles.previewRoomInfo}><Text style={styles.previewRoomTitle}>{item.title}</Text>
+              <Text style={styles.previewRoomCaption}>خاوەن: {item.host} · {item.mode}</Text></View>
+            <View style={[styles.previewRoomThumb, { backgroundColor: '#DFEBDF' }]}>
+              <Text style={styles.previewRoomEmoji}>🎙️</Text></View>
+          </TouchableOpacity>)}</>}
+        <View style={styles.roomsCreator}><Text style={styles.roomsSubheading}>ژووری خۆت دروست بکە</Text>
+          <View style={styles.roomsModeRow}>{['1v1', '4v4', '8v8', '12v12'].map((item, index) =>
+            <TouchableOpacity key={item} accessibilityRole="button" style={[styles.roomsMode,
+              roomMode === item && styles.roomsModeActive]} onPress={() => setRoomMode(item)}>
+              <Text style={[styles.roomsModeText, roomMode === item && styles.roomsModeTextActive]}>
+                {['١ بە ١', '٤ بە ٤', '٨ بە ٨', '١٢ بە ١٢'][index]}</Text></TouchableOpacity>)}</View>
+          <TextInput style={styles.roomsInput} value={roomName} onChangeText={setRoomName}
+            placeholder="ناوی ژوورەکەت بنووسە" placeholderTextColor="#938988" maxLength={36} />
+          <TouchableOpacity accessibilityRole="button" style={styles.roomsCreateButton} onPress={createRoom}>
+            <Text style={styles.roomsCreateText}>＋ ژووری ناوخۆیی دروست بکە</Text></TouchableOpacity>
+          <Text style={styles.roomsFootnote}>ئەم ژوورە لەم ئایفۆنەدایە؛ ژووری ئۆنلاین و دەنگ هێشتا نییە.</Text>
+        </View>
+      </>}
       {screen === 'room' && <>{header(room?.title || 'ژوور')}
         <View style={styles.sectionHero}><Text style={styles.sectionIcon}>🎙️</Text>
           <Text style={styles.sectionHeading}>{room?.title || 'ژوور'}</Text>
-          <Text style={styles.sectionCopy}>{room?.mode || '1v1'} · ژووری ناوخۆیی</Text></View>
+          <Text style={styles.sectionCopy}>{room?.mode || '1v1'} · {room?.preview ? 'نموونەی ڕووکار' : 'ژووری ناوخۆیی'}</Text></View>
         <View style={styles.seatCard}><Text style={styles.seatAvatar}>♛</Text>
           <View><Text style={styles.modeName}>{room?.host || name}</Text>
             <Text style={styles.modeDetail}>خاوەنی ژوور · ئەندامی ئێستا</Text></View></View>
-        {notice('بۆ یاریی دوو کەس لە هەمان ئایفۆن دوگمەی ڕکابەری بەکار بهێنە. میکرۆفۆن و بانگهێشتنی ئۆنلاین هێشتا نییە.')}
+        {notice(room?.preview ? 'ئەمە ژووری ڕاستەقینە نییە؛ تەنها نموونەی دیزاینە. بۆ ژووری خۆت لە شاشەی ژوورەکاندا ژووری ناوخۆیی دروست بکە.' :
+          'بۆ یاریی دوو کەس لە هەمان ئایفۆن دوگمەی ڕکابەری بەکار بهێنە. میکرۆفۆن و بانگهێشتنی ئۆنلاین هێشتا نییە.')}
         {button('⚔️ ڕکابەری دەست پێ بکە', () => begin('pk'))}
         {button('🧠 تەحەدای پرسیار', () => begin('quiz'), true)}
         {button('دەرچوون لە ژوور', () => setScreen('rooms'), true)}</>}
@@ -421,7 +472,63 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: NAVY },
+  safeRooms: { backgroundColor: '#FAF7F4' },
   page: { padding: 18, paddingBottom: 112 },
+  roomsHeader: { backgroundColor: '#FFE3D6', marginHorizontal: -18, marginTop: -18,
+    paddingHorizontal: 18, paddingTop: 28, paddingBottom: 13, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'space-between' },
+  roomsSearch: { color: '#28242D', fontSize: 31, width: 43, textAlign: 'center' },
+  roomsHeadingBox: { flex: 1, alignItems: 'flex-end', marginRight: 13 },
+  roomsEyebrow: { color: '#745F5F', fontSize: 12 },
+  roomsHeading: { color: '#1D1C22', fontWeight: '900', fontSize: 25 },
+  roomsBanner: { overflow: 'hidden', height: 123, borderRadius: 17, marginTop: 12 },
+  roomsBannerImage: { borderRadius: 17 },
+  roomsBannerShade: { flex: 1, backgroundColor: 'rgba(19,13,17,0.48)', alignItems: 'flex-end',
+    justifyContent: 'flex-end', padding: 14 },
+  roomsBannerTitle: { color: '#FFF8EF', fontSize: 22, fontWeight: '900', textAlign: 'right' },
+  roomsBannerCopy: { color: '#F8E1C8', fontSize: 13, marginTop: 3, textAlign: 'right' },
+  roomsGiftBanner: { backgroundColor: '#FFBE58', borderRadius: 18, flexDirection: 'row',
+    alignItems: 'center', minHeight: 72, marginTop: 14, paddingHorizontal: 15 },
+  roomsGiftIcon: { fontSize: 29 },
+  roomsGiftText: { color: '#3A2730', fontSize: 16, fontWeight: '800', flex: 1,
+    textAlign: 'right', marginHorizontal: 9 },
+  roomsGiftArrow: { color: '#573B31', fontSize: 28 },
+  roomsFilters: { flexDirection: 'row-reverse', paddingVertical: 14, alignItems: 'center' },
+  roomsFilter: { backgroundColor: '#F0F1F3', borderRadius: 25, paddingHorizontal: 14,
+    paddingVertical: 9, marginLeft: 7 },
+  roomsFilterActive: { backgroundColor: '#FF875F' },
+  roomsFilterText: { color: '#6F727A', fontWeight: '700', fontSize: 14 },
+  roomsFilterTextActive: { color: '#FFFFFF' },
+  previewRoomCard: { backgroundColor: '#FFFFFF', borderRadius: 18, minHeight: 94,
+    padding: 11, flexDirection: 'row', alignItems: 'center', marginBottom: 10,
+    shadowColor: '#452328', shadowOpacity: 0.05, shadowRadius: 7, elevation: 2 },
+  previewRoomSide: { width: 58, justifyContent: 'space-between', minHeight: 57,
+    alignItems: 'flex-start' },
+  previewRoomNumber: { color: '#888A92', fontSize: 15, fontWeight: '700' },
+  previewRoomBadge: { color: '#DC734F', fontSize: 11, fontWeight: '800' },
+  previewRoomInfo: { flex: 1, paddingHorizontal: 8, alignItems: 'flex-end' },
+  previewRoomTitle: { color: '#24232B', fontSize: 18, fontWeight: '900', textAlign: 'right' },
+  previewRoomCaption: { color: '#7B7D85', fontSize: 13, textAlign: 'right', marginTop: 4 },
+  previewRoomCategory: { color: '#D27953', fontSize: 11, textAlign: 'right', marginTop: 5 },
+  previewRoomThumb: { width: 67, height: 67, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center' },
+  previewRoomEmoji: { fontSize: 36 },
+  roomsEmpty: { color: '#73737B', fontSize: 15, paddingVertical: 18, textAlign: 'right' },
+  roomsSubheading: { color: '#25242A', fontWeight: '900', fontSize: 19, textAlign: 'right',
+    marginVertical: 9 },
+  roomsCreator: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 15, marginTop: 6 },
+  roomsModeRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  roomsMode: { backgroundColor: '#F0F1F3', borderRadius: 12, paddingVertical: 9,
+    alignItems: 'center', width: '24%' },
+  roomsModeActive: { backgroundColor: '#FF875F' },
+  roomsModeText: { color: '#73737B', fontWeight: '800', fontSize: 13 },
+  roomsModeTextActive: { color: '#FFFFFF' },
+  roomsInput: { borderWidth: 1, borderColor: '#DFD9D8', borderRadius: 13, color: '#24232B',
+    padding: 13, marginVertical: 12, textAlign: 'right', fontSize: 16 },
+  roomsCreateButton: { backgroundColor: '#FF875F', borderRadius: 12, padding: 14 },
+  roomsCreateText: { color: '#FFFFFF', textAlign: 'center', fontSize: 16, fontWeight: '900' },
+  roomsFootnote: { color: '#777078', fontSize: 12, lineHeight: 19,
+    textAlign: 'right', marginTop: 10 },
   homeHeader: { flexDirection: 'row', alignItems: 'center', marginVertical: 13 },
   homeIdentity: { flex: 1, marginHorizontal: 12 },
   avatar: { width: 48, height: 48, borderRadius: 17, backgroundColor: '#332713',
@@ -577,8 +684,12 @@ const styles = StyleSheet.create({
   nav: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#101218',
     borderTopWidth: 1, borderTopColor: '#776038', paddingVertical: 10, flexDirection: 'row',
     justifyContent: 'space-around' },
+  navWarm: { backgroundColor: '#FFFFFF', borderTopColor: '#E9DDDC' },
   navItem: { alignItems: 'center', width: '20%' },
   navIcon: { color: '#898582', fontSize: 23 },
   navLabel: { color: '#898582', fontSize: 10 },
   navActive: { color: GOLD, fontWeight: '900' },
+  navIconWarm: { color: '#858C96' },
+  navLabelWarm: { color: '#858C96' },
+  navActiveWarm: { color: '#FF875F', fontWeight: '900' },
 });
