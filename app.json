@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Tahadi Plus",
+    "name": "تەحەدی پڵەس",
     "slug": "tahadi-plus",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.tahadiplus.app"
