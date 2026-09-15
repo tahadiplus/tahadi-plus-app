@@ -21,6 +21,7 @@ test('validates same-number unique-color groups and 3-to-5 runs', () => {
   assert.equal(konkan.validMeld([tile(1, 9, 'blue'), tile(2, 9, 'blue'), tile(3, 9, 'black')], cup), false);
   assert.equal(konkan.validMeld([tile(1, 4, 'blue'), tile(2, 5, 'blue'), tile(3, 6, 'blue'), tile(4, 7, 'blue'), tile(5, 8, 'blue')], cup), true);
   assert.equal(konkan.validMeld([tile(1, 12, 'blue'), tile(2, 13, 'blue'), tile(3, 1, 'blue')], cup), true);
+  assert.equal(konkan.validMeld([tile(1, 11, 'blue'), tile(2, 12, 'blue'), tile(3, 13, 'blue'), tile(4, 1, 'blue')], cup), true);
   assert.equal(konkan.validMeld([tile(1, 13, 'blue'), tile(2, 1, 'blue'), tile(3, 2, 'blue')], cup), false);
 });
 test('scores the Erbil opening example as 81', () => {

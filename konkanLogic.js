@@ -30,8 +30,10 @@ function validMeld(tiles, cup) {
   const sorted = tiles.map(tile => tile.number).sort((a, b) => a - b);
   if (new Set(sorted).size !== sorted.length) return false;
   if (sorted.every((value, index) => value === sorted[0] + index)) return true;
-  // The ace may end a run as 12-13-1, but 13-1-2 must never bridge.
-  return tiles.length === 3 && sorted.join(',') === '1,12,13';
+  // The ace may end a run as 12-13-1 (also 11-12-13-1, etc.),
+  // but 13-1-2 must never bridge from high ace back to low numbers.
+  return sorted[0] === 1 && sorted[sorted.length - 1] === 13 &&
+    sorted.slice(1).every((value, index) => value === 14 - (sorted.length - 1) + index);
 }
 
 function meldPoints(tiles) { return tiles.reduce((sum, tile) => sum + points(tile), 0); }
