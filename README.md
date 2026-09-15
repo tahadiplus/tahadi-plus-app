@@ -1,12 +1,17 @@
-# Tahadi Plus — iPhone demo
+# تەحەدی پڵەس — وەشانی تاقیکردنەوەی ئایفۆن
 
 Expo / React Native prototype for iPhone. It includes an eight-question challenge,
 two-player pass-and-play PK, locally created Konkan rooms, a solo Okey draw/discard
 game, demo coins and locally collectible gifts, a local leaderboard, and a profile
 name. The interface uses a charcoal/gold arcade look with a PK arena, game modes,
-room cards, an Okey table and a bottom navigation bar.
+room cards, an Okey table and a bottom navigation bar. The Kurdish identity uses a
+code-native Kurdistan flag and an original Zagros citadel illustration. The KonKan
+practice table deals tiles, checks non-joker melds, scores them, enforces an
+81-point Erbil opening and supports draw/discard and a solo finish.
 
-The app works without a server. Rooms are not shared with another phone, voice chat
+KonKan is a solo rules practice, not a complete four-player game: jokers, joker
+stealing, discard-pick restrictions, dynamic openings, team turns and scoring are
+not implemented yet. The app works without a server. Rooms are not shared with another phone, voice chat
 is not connected, coins cannot be purchased or redeemed, and scores do not persist
 after the app closes. There are no fake LIVE players or fake purchases.
 
@@ -34,7 +39,7 @@ the iOS JavaScript bundle but does not publish an installable iPhone app.
 ## Developer checks
 
 ```sh
-node --test gameLogic.test.js
+node --test gameLogic.test.js konkanLogic.test.js
 npx expo export --platform ios --output-dir dist
 ```
 
