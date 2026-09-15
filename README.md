@@ -20,10 +20,13 @@ npm install
 npx expo start --tunnel
 ```
 
-Scan the QR code from the iPhone to open in Expo Go. No Windows machine is needed.
-For a completely phone-only workflow, an Expo account and a published hosted
-preview/build are needed; the GitHub Actions iOS bundle check validates JavaScript
-but does not publish an installable iPhone app.
+Scan the QR code from the iPhone. Expo Go on iOS only supports the SDK version
+bundled with its current App Store release; this repository's Expo SDK may
+require a dedicated development build instead of Expo Go. A separate temporary
+Snack preview uses an Expo-Go-compatible SDK for direct phone testing. No
+Windows machine is needed. For a stable hosted link or an installable app,
+connect an Expo account and publish a preview/build. GitHub Actions validates
+the iOS JavaScript bundle but does not publish an installable iPhone app.
 
 ## Developer checks
 
