@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, ImageBackground, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import okey from './gameLogic';
 import konkan from './konkanLogic';
 import KurdistanFlag from './KurdistanFlag';
+import localSave from './localSave';
 
 const GOLD = '#F1C65D', GOLD_SOFT = '#D69A37', NAVY = '#080A10', CARD = '#171B24', PALE = '#F7F1E5';
 const quiz = [
@@ -45,6 +47,31 @@ export default function App() {
   const [selected, setSelected] = useState(null);
   const [konkanBoard, setKonkanBoard] = useState(() => konkan.startKonkan());
   const [konkanSelected, setKonkanSelected] = useState([]);
+  const [saveReady, setSaveReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(localSave.SAVE_KEY).then(raw => {
+      if (!mounted) return;
+      const saved = localSave.restoreSave(raw);
+      if (saved) {
+        setName(saved.name); setCoins(saved.coins); setWins(saved.wins);
+        setRooms(saved.rooms); setInventory(saved.inventory);
+        if (saved.board) setBoard(saved.board);
+        if (saved.konkanBoard) setKonkanBoard(saved.konkanBoard);
+      }
+    }).catch(() => {}).finally(() => { if (mounted) setSaveReady(true); });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!saveReady) return;
+    const timer = setTimeout(() => {
+      AsyncStorage.setItem(localSave.SAVE_KEY,
+        localSave.packSave({ name, coins, wins, rooms, inventory, board, konkanBoard })).catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [saveReady, name, coins, wins, rooms, inventory, board, konkanBoard]);
 
   function begin(nextMode) {
     setMode(nextMode); setIndex(0); setTurn(0); setPoints([0, 0]);
@@ -444,7 +471,7 @@ export default function App() {
         <View style={styles.stats}><Text style={styles.stat}>🪙 {coins} کۆین</Text>
           <Text style={styles.stat}>🏆 {wins} بردنەوە</Text></View>
         {button('🪙 کۆین و دیارییەکان', () => setScreen('wallet'))}
-        {notice('ئەم داتایە تا ئەپەکە داخەیت لە بیرگەدایە؛ هەژماری ڕاستەقینە هێشتا نییە.')}</>}
+        {notice('ئەم داتایە لەسەر هەمان ئایفۆنەکەت دەپارێزرێت؛ هەژماری ئۆنلاین هێشتا نییە.')}</>}
       {screen === 'wallet' && <>{header('کۆین')}
         <View style={styles.walletHero}><Text style={styles.walletIcon}>🪙</Text>
           <Text style={styles.walletTitle}>{coins}</Text><Text style={styles.sectionCopy}>کۆینی دیمۆی تۆ</Text></View>
