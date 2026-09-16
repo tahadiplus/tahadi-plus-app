@@ -163,14 +163,14 @@ export default function App() {
     if (konkanBoard.phase !== 'meld') return Alert.alert('سەرەتا کاشییەک هەڵبگرە');
     const group = konkanBoard.hand.filter(tile => konkanSelected.includes(tile.id));
     if (!konkan.validMeld(group, konkanBoard.cup)) return Alert.alert('گرووپەکە دروست نییە',
-      '٣ تا ٥ کاشی هاوشێوە یان زنجیرە هەڵبژێرە. جوکەرەکان لەم ڕاهێنانەدا هێشتا ناچنە گرووپ.');
+      '٣ تا ٥ کاشی هاوشێوە یان زنجیرە هەڵبژێرە. دوو جوکەر لە گرووپی سێ کاشیدا ڕێگەپێنەدراوە.');
     setKonkanBoard(previous => ({ ...previous,
       hand: previous.hand.filter(tile => !konkanSelected.includes(tile.id)),
       [previous.opened ? 'melds' : 'pending']: [...(previous.opened ? previous.melds : previous.pending), group] }));
     setKonkanSelected([]);
   }
   function openKonkan() {
-    const score = konkanBoard.pending.reduce((sum, group) => sum + konkan.meldPoints(group), 0);
+    const score = konkanBoard.pending.reduce((sum, group) => sum + konkan.meldPoints(group, konkanBoard.cup), 0);
     if (score < 81) return Alert.alert('٨١ خاڵ پێویستە', 'گرووپەکانی ئەم نۆرە: ' + score + ' خاڵ.');
     setKonkanBoard(previous => ({ ...previous, opened: true, openPoints: score,
       melds: [...previous.melds, ...previous.pending], pending: [] }));
@@ -398,11 +398,11 @@ export default function App() {
         </View>
         {konkanBoard.melds.length > 0 && <>{title('گرووپەکانی سەر مێز')}
           {konkanBoard.melds.map((group, index) => <View key={index} style={styles.meldRow}>
-            <Text style={styles.meldText}>{group.map(tile => tile.number).join(' · ')} · {konkan.meldPoints(group)} خاڵ</Text></View>)}</>}
+            <Text style={styles.meldText}>{group.map(tile => tile.color === 'false' || konkan.isRealJoker(tile, konkanBoard.cup) ? '★' : tile.number).join(' · ')} · {konkan.meldPoints(group, konkanBoard.cup)} خاڵ</Text></View>)}</>}
         {konkanBoard.pending.length > 0 && <>{title('گرووپە چاوەڕوانەکان')}
-          <Text style={styles.notice}>{konkanBoard.pending.reduce((sum, group) => sum + konkan.meldPoints(group), 0)} / ٨١ خاڵ · لەم نۆرەدا</Text>
+          <Text style={styles.notice}>{konkanBoard.pending.reduce((sum, group) => sum + konkan.meldPoints(group, konkanBoard.cup), 0)} / ٨١ خاڵ · لەم نۆرەدا</Text>
           {konkanBoard.pending.map((group, index) => <View key={index} style={styles.meldRow}>
-            <Text style={styles.meldText}>{group.map(tile => tile.number).join(' · ')} · {konkan.meldPoints(group)} خاڵ</Text></View>)}</>}
+            <Text style={styles.meldText}>{group.map(tile => tile.color === 'false' || konkan.isRealJoker(tile, konkanBoard.cup) ? '★' : tile.number).join(' · ')} · {konkan.meldPoints(group, konkanBoard.cup)} خاڵ</Text></View>)}</>}
         {title('کاشییەکانی تۆ')}
         <View style={styles.rack}><View style={styles.tileRow}>{konkanBoard.hand.map(tile =>
           <TouchableOpacity key={tile.id} accessibilityRole="button" accessibilityLabel={'کاشی ' + tile.number}
@@ -419,7 +419,7 @@ export default function App() {
             {button('گرووپەکان هەڵبوەشێنەوە', undoKonkan, true)}</>}
           {button('یەک کاشی فڕێ بدە', discardKonkan, true)}</>}
         {button('مێزی کۆنکانی نوێ', () => { setKonkanBoard(konkan.startKonkan()); setKonkanSelected([]); }, true)}
-        {notice('ئەمە ڕاهێنانی بنەڕەتییە: جوکەر، دزینی جوکەر، تیمی ٤ کەسی، پلەبەندی و هەموو وردەیاساکان هێشتا جێبەجێ نەکراون.')}</>}
+        {notice('ئەمە ڕاهێنانی بنەڕەتییە: جوکەر بۆ گرووپ بەکاردێت؛ دزینی جوکەر، تیمی ٤ کەسی، پلەبەندی و هەموو وردەیاساکان هێشتا جێبەجێ نەکراون.')}</>}
       {screen === 'okey' && <>{header('ئۆکەی')}
         <View style={styles.okeyHeader}><Text style={styles.sectionIcon}>🀄</Text>
           <Text style={styles.sectionHeading}>مێزی ئۆکەی</Text>

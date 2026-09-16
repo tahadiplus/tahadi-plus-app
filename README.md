@@ -7,10 +7,10 @@ name. Local profile, wallet, rooms and game boards persist on the same device us
 unencrypted AsyncStorage; do not store passwords or payment details there. The interface uses a charcoal/gold arcade look with a PK arena, game modes,
 room cards, an Okey table and a bottom navigation bar. The Kurdish identity uses a
 code-native Kurdistan flag and an original Zagros citadel illustration. The KonKan
-practice table deals tiles, checks non-joker melds, scores them, enforces an
+practice table deals tiles, checks standard and joker melds, scores them, enforces an
 81-point Erbil opening and supports draw/discard and a solo finish.
 
-KonKan is a solo rules practice, not a complete four-player game: jokers, joker
+KonKan is a solo rules practice, not a complete four-player game: joker
 stealing, discard-pick restrictions, dynamic openings, team turns and scoring are
 not implemented yet. The app works without a server. Rooms are not shared with another phone, voice chat
 is not connected, and coins cannot be purchased or redeemed. There are no fake

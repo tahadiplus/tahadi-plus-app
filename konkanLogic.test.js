@@ -25,10 +25,24 @@ test('validates same-number unique-color groups and 3-to-5 runs', () => {
   assert.equal(konkan.validMeld([tile(1, 13, 'blue'), tile(2, 1, 'blue'), tile(3, 2, 'blue')], cup), false);
 });
 test('scores the Erbil opening example as 81', () => {
-  const groups = [[9, 9, 9], [10, 11, 12], [7, 8, 9]];
-  assert.equal(groups.reduce((sum, group) => sum + konkan.meldPoints(group.map((number, id) => tile(id, number, 'blue'))), 0), 81);
+  const groups = [
+    [tile(1, 9, 'red'), tile(2, 9, 'black'), tile(3, 9, 'yellow')],
+    [tile(4, 10, 'blue'), tile(5, 11, 'blue'), tile(6, 12, 'blue')],
+    [tile(7, 7, 'black'), tile(8, 8, 'black'), tile(9, 9, 'black')],
+  ];
+  assert.equal(groups.reduce((sum, group) => sum + konkan.meldPoints(group, cup), 0), 81);
 });
-test('practice explicitly rejects wildcard melds', () => {
-  assert.equal(konkan.validMeld([tile(1, 7, 'red'), tile(2, 8, 'red'), tile(3, 9, 'red')], cup), false);
-  assert.equal(konkan.validMeld([tile(1, 7, 'red'), tile(2, 0, 'false'), tile(3, 9, 'red')], cup), false);
+test('real joker is wild and antique is the fixed cup-minus-one tile', () => {
+  assert.equal(konkan.validMeld([tile(1, 7, 'red'), tile(2, 8, 'red'), tile(3, 9, 'red')], cup), true);
+  assert.equal(konkan.meldPoints([tile(1, 7, 'red'), tile(2, 8, 'red'), tile(3, 9, 'red')], cup), 24);
+  assert.equal(konkan.validMeld([tile(1, 7, 'red'), tile(2, 0, 'false'), tile(3, 9, 'red')], cup), true);
+  assert.equal(konkan.validMeld([tile(1, 9, 'blue'), tile(2, 8, 'red'), tile(3, 9, 'black')], cup), true);
+  assert.equal(konkan.validMeld([tile(1, 9, 'blue'), tile(2, 0, 'false'), tile(3, 9, 'black')], cup), false);
+});
+test('two wild jokers cannot make a three-tile meld and a wildcard does not bridge 13-1-2', () => {
+  assert.equal(konkan.validMeld([tile(1, 7, 'blue'), tile(2, 8, 'red'), tile(3, 8, 'red')], cup), false);
+  assert.equal(konkan.validMeld([tile(1, 13, 'blue'), tile(2, 1, 'blue'), tile(3, 2, 'blue'), tile(4, 8, 'red')], cup), false);
+});
+test('ambiguous joker position scores conservatively', () => {
+  assert.equal(konkan.meldPoints([tile(1, 6, 'blue'), tile(2, 7, 'blue'), tile(3, 8, 'red')], cup), 18);
 });

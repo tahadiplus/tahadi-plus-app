@@ -11,8 +11,8 @@
 
 1. Implement an authoritative server for identities, invitations, 2v2 KonKan matches,
    turns, timers, reconnection, team scoring and anti-cheat. The current rooms only
-   exist on one device. Complete the remaining KonKan rules, including wildcard
-   melds, joker stealing, dynamic opening minimum, discard restrictions and rounds.
+   exist on one device. Complete the remaining KonKan rules, including joker
+   stealing, dynamic opening minimum, discard restrictions and rounds.
 2. Provision a real-time voice provider/backend, microphone permission and
    consent flow, mute, moderation, reporting and user blocking. A room card or
    permission prompt alone does not provide voice chat.
