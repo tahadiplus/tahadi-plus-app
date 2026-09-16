@@ -7,10 +7,12 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tahadiplus.app"
+      "bundleIdentifier": "com.tahadiplus.app",
+      "buildNumber": "1"
     },
     "android": {
-      "package": "com.tahadiplus.app"
+      "package": "com.tahadiplus.app",
+      "versionCode": 1
     }
   }
 }
